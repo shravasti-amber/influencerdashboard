@@ -1,0 +1,15 @@
+# Influencer / customer PII — never commit these
+*.xlsx
+*.xls
+*.csv
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Server / logs
+/tmp/
+*.log

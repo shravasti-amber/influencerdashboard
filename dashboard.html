@@ -1,0 +1,1257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Amber · Influencer Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root { color-scheme: light; }
+  html, body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .scrollbar-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 500; }
+  .chip-x { cursor: pointer; opacity: .6; }
+  .chip-x:hover { opacity: 1; }
+  .multiselect { position: relative; }
+  .multiselect-list { position: absolute; z-index: 30; top: 100%; left: 0; right: 0; max-height: 260px; overflow-y: auto;
+    background: white; border: 1px solid #e4e4e7; border-radius: 8px; margin-top: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .multiselect-list label { display: flex; gap: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
+  .multiselect-list label:hover { background: #f4f4f5; }
+  .drop-active { outline: 2px dashed #6366f1; background: #eef2ff; }
+  .tab-btn { padding: 8px 14px; font-size: 13px; font-weight: 500; border-radius: 8px 8px 0 0; border: 1px solid transparent; border-bottom: 0; }
+  .tab-btn.active { background: white; border-color: #e4e4e7; color: #111; }
+  .tab-btn:not(.active) { color: #71717a; }
+  .tab-btn:not(.active):hover { color: #111; background: #f4f4f5; }
+  .funnel-bar { height: 28px; border-radius: 4px; transition: width .25s; }
+</style>
+</head>
+<body class="bg-zinc-50 text-zinc-900">
+
+<header class="bg-white border-b border-zinc-200 sticky top-0 z-20">
+  <div class="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center text-white font-bold">A</div>
+      <div>
+        <h1 class="text-lg font-semibold leading-none">Influencer Marketing Dashboard</h1>
+        <p class="text-xs text-zinc-500 mt-0.5">Amber · prospects · videos · targets</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="load-status" class="text-xs text-zinc-500"></span>
+      <label class="cursor-pointer inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-2 rounded-lg">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload .xlsx or .csv
+        <input id="file-input" type="file" accept=".csv,.xlsx,.xls" class="hidden" />
+      </label>
+      <button id="load-sample" class="text-sm px-3 py-2 rounded-lg border border-zinc-300 hover:bg-zinc-100">Load current workbook</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1600px] mx-auto px-6 py-6 space-y-6">
+
+  <!-- DROP ZONE / EMPTY STATE -->
+  <div id="empty-state" class="bg-white rounded-xl border-2 border-dashed border-zinc-300 p-10 text-center">
+    <h2 class="text-xl font-semibold mb-1">Drop the workbook here</h2>
+    <p class="text-zinc-500 text-sm mb-4">Or click <b>Upload</b> in the top right. Accepts .xlsx (multi-sheet) and .csv.</p>
+    <button id="load-sample-2" class="text-sm px-4 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">Load current Master workbook</button>
+    <p class="text-xs text-zinc-400 mt-4">We auto-detect the <b>Master prospect</b>, <b>video live data</b>, and <b>Target Sheet</b> tabs.</p>
+  </div>
+
+  <!-- TABS -->
+  <div id="tab-bar" class="hidden border-b border-zinc-200 flex gap-1">
+    <button class="tab-btn active" data-tab="prospects">Prospects <span class="ml-1 text-[10px] bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded-full" data-count="prospects">0</span></button>
+    <button class="tab-btn" data-tab="videos">Videos Live <span class="ml-1 text-[10px] bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded-full" data-count="videos">0</span></button>
+    <button class="tab-btn" data-tab="targets">Targets vs Actuals</button>
+  </div>
+
+  <!-- ====================== PROSPECTS TAB ====================== -->
+  <div data-tab-content="prospects" class="hidden space-y-6">
+
+    <section class="bg-white rounded-xl border border-zinc-200 p-4">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" id="filters-prospects"></div>
+      <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
+        <div id="active-chips-prospects" class="flex flex-wrap gap-1.5"></div>
+        <div class="flex items-center gap-2">
+          <button data-reset="prospects" class="text-xs px-2.5 py-1.5 rounded-md border border-zinc-300 hover:bg-zinc-100">Reset filters</button>
+          <button data-export="prospects" class="text-xs px-2.5 py-1.5 rounded-md bg-zinc-900 text-white hover:bg-zinc-800">Export filtered CSV</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="kpi-row-prospects" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3"></section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Pipeline funnel</h3><span class="text-xs text-zinc-500">prospects by stage</span></div><div class="h-[260px]"><canvas id="ch-funnel"></canvas></div></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Outreach over time</h3><span class="text-xs text-zinc-500">by month</span></div><div class="h-[260px]"><canvas id="ch-month"></canvas></div></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-8"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Performance by POC</h3><span class="text-xs text-zinc-500">click a bar to drill in</span></div><div class="h-[380px]"><canvas id="ch-poc"></canvas></div></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-4"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Platform mix</h3><span class="text-xs text-zinc-500">share of outreach</span></div><div class="h-[380px]"><canvas id="ch-platform"></canvas></div></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Top destinations</h3><span class="text-xs text-zinc-500">where influencers are sent</span></div><div class="h-[280px]"><canvas id="ch-dest"></canvas></div></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Top source countries</h3><span class="text-xs text-zinc-500">overall count</span></div><div class="h-[280px]"><canvas id="ch-source"></canvas></div></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-7"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Source country → onboarded</h3><span class="text-xs text-zinc-500">stacked by outcome · top 15</span></div><div class="h-[420px]"><canvas id="ch-source-onboard"></canvas></div></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Month-over-month growth</h3><span class="text-xs text-zinc-500">% change vs previous month</span></div><div class="h-[420px]"><canvas id="ch-mom"></canvas></div></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-7"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Conversion rate by POC</h3><span class="text-xs text-zinc-500">min 30 prospects</span></div><div class="h-[280px]"><canvas id="ch-conv"></canvas></div></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Why we lose deals</h3><span class="text-xs text-zinc-500">lost reasons</span></div><div class="h-[280px]"><canvas id="ch-lost"></canvas></div></div>
+    </section>
+
+    <section class="bg-white rounded-xl border border-zinc-200">
+      <div class="p-4 flex items-center justify-between gap-3 flex-wrap border-b border-zinc-200">
+        <div><h3 class="font-semibold text-sm">Prospects</h3><p class="text-xs text-zinc-500" id="table-meta-prospects"></p></div>
+        <input type="text" placeholder="Search partner, email, country..." class="text-sm border border-zinc-300 rounded-lg px-3 py-1.5 w-72" data-search="prospects" />
+      </div>
+      <div class="overflow-x-auto scrollbar-thin">
+        <table class="min-w-full text-xs">
+          <thead class="bg-zinc-50 text-zinc-600 uppercase tracking-wide">
+            <tr><th class="px-3 py-2 text-left">POC</th><th class="px-3 py-2 text-left">Month</th><th class="px-3 py-2 text-left">Reachout</th><th class="px-3 py-2 text-left">Partner</th><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-left">Source</th><th class="px-3 py-2 text-left">Destination</th><th class="px-3 py-2 text-right">Subs</th><th class="px-3 py-2 text-left">Status</th><th class="px-3 py-2 text-left">Lost reason</th></tr>
+          </thead>
+          <tbody id="table-body-prospects" class="divide-y divide-zinc-100"></tbody>
+        </table>
+      </div>
+      <div class="p-3 flex items-center justify-between text-xs text-zinc-500 border-t border-zinc-200">
+        <span id="table-pageinfo-prospects"></span>
+        <div class="flex gap-1"><button data-page="prospects" data-dir="-1" class="px-2 py-1 rounded border border-zinc-300 hover:bg-zinc-100">Prev</button><button data-page="prospects" data-dir="1" class="px-2 py-1 rounded border border-zinc-300 hover:bg-zinc-100">Next</button></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ====================== VIDEOS TAB ====================== -->
+  <div data-tab-content="videos" class="hidden space-y-6">
+
+    <section class="bg-white rounded-xl border border-zinc-200 p-4">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" id="filters-videos"></div>
+      <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
+        <div id="active-chips-videos" class="flex flex-wrap gap-1.5"></div>
+        <div class="flex items-center gap-2">
+          <button data-reset="videos" class="text-xs px-2.5 py-1.5 rounded-md border border-zinc-300 hover:bg-zinc-100">Reset filters</button>
+          <button data-export="videos" class="text-xs px-2.5 py-1.5 rounded-md bg-zinc-900 text-white hover:bg-zinc-800">Export filtered CSV</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="kpi-row-videos" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3"></section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-7">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Funnel: Views → Bookings</h3><span class="text-xs text-zinc-500">drop-off at each step</span></div>
+        <div id="funnel-html" class="space-y-2 py-2"></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Paid vs Affiliate</h3><span class="text-xs text-zinc-500">spend, leads, efficiency</span></div>
+        <div id="paid-affiliate-cards" class="grid grid-cols-2 gap-3 py-2"></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Performance trend over time</h3><span class="text-xs text-zinc-500">monthly — views, traffic, leads, bookings</span></div>
+        <div class="h-[300px]"><canvas id="vch-trend"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-7">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Channel performance</h3><span class="text-xs text-zinc-500">spend vs leads · CPL annotated</span></div>
+        <div class="h-[320px]"><canvas id="vch-channel"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Cost efficiency by channel</h3><span class="text-xs text-zinc-500">CPV · CPL · CPB</span></div>
+        <div class="overflow-x-auto"><table class="w-full text-xs" id="tbl-channel-eff"></table></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-7">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">POC performance — leads & bookings</h3><span class="text-xs text-zinc-500">top 15 · click to drill</span></div>
+        <div class="h-[420px]"><canvas id="vch-poc"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Top partners by leads</h3><span class="text-xs text-zinc-500">top 15</span></div>
+        <div class="h-[420px]"><canvas id="vch-partner"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Source country → leads</h3><span class="text-xs text-zinc-500">top sources driving leads</span></div>
+        <div class="h-[320px]"><canvas id="vch-source"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Destination → leads</h3><span class="text-xs text-zinc-500">where leads are going</span></div>
+        <div class="h-[320px]"><canvas id="vch-dest"></canvas></div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl border border-zinc-200">
+      <div class="p-4 flex items-center justify-between gap-3 flex-wrap border-b border-zinc-200">
+        <div><h3 class="font-semibold text-sm">Videos</h3><p class="text-xs text-zinc-500" id="table-meta-videos"></p></div>
+        <input type="text" placeholder="Search partner, channel..." class="text-sm border border-zinc-300 rounded-lg px-3 py-1.5 w-72" data-search="videos" />
+      </div>
+      <div class="overflow-x-auto scrollbar-thin">
+        <table class="min-w-full text-xs">
+          <thead class="bg-zinc-50 text-zinc-600 uppercase tracking-wide">
+            <tr><th class="px-3 py-2 text-left">Date</th><th class="px-3 py-2 text-left">POC</th><th class="px-3 py-2 text-left">Partner</th><th class="px-3 py-2 text-left">Channel</th><th class="px-3 py-2 text-left">Source</th><th class="px-3 py-2 text-left">Dest</th><th class="px-3 py-2 text-right">Views</th><th class="px-3 py-2 text-right">Traffic</th><th class="px-3 py-2 text-right">Leads</th><th class="px-3 py-2 text-right">Bookforms</th><th class="px-3 py-2 text-right">Bookings</th><th class="px-3 py-2 text-right">Budget ₹</th><th class="px-3 py-2 text-left">P/A</th><th class="px-3 py-2 text-left">Quality</th></tr>
+          </thead>
+          <tbody id="table-body-videos" class="divide-y divide-zinc-100"></tbody>
+        </table>
+      </div>
+      <div class="p-3 flex items-center justify-between text-xs text-zinc-500 border-t border-zinc-200">
+        <span id="table-pageinfo-videos"></span>
+        <div class="flex gap-1"><button data-page="videos" data-dir="-1" class="px-2 py-1 rounded border border-zinc-300 hover:bg-zinc-100">Prev</button><button data-page="videos" data-dir="1" class="px-2 py-1 rounded border border-zinc-300 hover:bg-zinc-100">Next</button></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ====================== TARGETS TAB ====================== -->
+  <div data-tab-content="targets" class="hidden space-y-6">
+    <section class="bg-white rounded-xl border border-zinc-200 p-4">
+      <div class="flex items-center justify-between mb-2">
+        <div><h3 class="font-semibold text-sm">Targets vs Actuals</h3><p class="text-xs text-zinc-500">monthly reach-outs target (120/mo · 10/day) · onboards target (4/mo)</p></div>
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-zinc-600">Month</label>
+          <select id="target-month" class="text-sm border border-zinc-300 rounded px-2 py-1"></select>
+        </div>
+      </div>
+      <div class="overflow-x-auto"><table class="w-full text-xs" id="tbl-targets"></table></div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="bg-white rounded-xl border border-zinc-200 p-4">
+        <div class="mb-2"><h3 class="font-semibold text-sm">Reach-out target attainment</h3><span class="text-xs text-zinc-500">selected month · actual ÷ target</span></div>
+        <div class="h-[420px]"><canvas id="tch-reach"></canvas></div>
+      </div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4">
+        <div class="mb-2"><h3 class="font-semibold text-sm">Onboarding target attainment</h3><span class="text-xs text-zinc-500">selected month · onboards vs goal of 4</span></div>
+        <div class="h-[420px]"><canvas id="tch-onboard"></canvas></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="max-w-[1600px] mx-auto px-6 py-6 text-xs text-zinc-400">
+  Single-file prototype · upload .xlsx (multi-sheet) or .csv · everything stays in your browser.
+</footer>
+
+<script>
+/* =========================================================
+   AMBER INFLUENCER DASHBOARD — multi-sheet xlsx version
+   ========================================================= */
+
+const SAMPLE_XLSX = "Interns Influencer _prospects Tracker .xlsx";
+const SAMPLE_CSV = "Interns Influencer _prospects Tracker  - Master prospect.csv";
+
+// ---------- normalization maps ----------
+const PLATFORM_MAP = {
+  "instagram":"Instagram","ig":"Instagram","insta":"Instagram",
+  "youtube":"YouTube","yt":"YouTube",
+  "tiktok":"TikTok","tt":"TikTok",
+  "em + ig":"Email + Instagram","email + ig":"Email + Instagram",
+  "both":"Multi-platform","email":"Email","x":"X / Twitter","twitter":"X / Twitter",
+  "linkedin":"LinkedIn","telegram":"Telegram","facebook":"Facebook","fb":"Facebook",
+};
+const DEST_MAP = {
+  "aus":"Australia","australia":"Australia","uk":"UK","uk doms":"UK Doms","uk dom":"UK Doms",
+  "usa":"USA","us":"USA","united states":"USA","germany":"Germany","ireland":"Ireland",
+  "canada":"Canada","france":"France","spain":"Spain","new zealand":"New Zealand","nz":"New Zealand",
+  "singapore":"Singapore","all":"All","generic":"Generic","others":"Others","rest of the world":"Rest of World",
+};
+const STATUS_MAP = {
+  "contacted":"Contacted","replied":"Replied",
+  "follow up":"Follow up 1","follow up 1":"Follow up 1","follow up 2":"Follow up 2","follow up 3":"Follow up 3",
+  "in talks":"In talks","high ask":"High ask",
+  "onboarding wip":"Onboarding WIP","onboarded":"Onboarded — Live","onboarded- live":"Onboarded — Live","onboarded - live":"Onboarded — Live",
+  "confirmed":"Onboarded — Live","contract sent":"Onboarded — Live",
+  "not interested":"Lost","lost cases":"Lost","ghosted":"Lost",
+};
+const STAGE_ORDER = ["Contacted","Replied","Follow up 1","Follow up 2","Follow up 3","In talks","High ask","Onboarding WIP","Onboarded — Live","Lost"];
+const STAGE_COLORS = {
+  "Contacted":"#94a3b8","Replied":"#60a5fa","Follow up 1":"#a78bfa","Follow up 2":"#8b5cf6","Follow up 3":"#7c3aed",
+  "In talks":"#0ea5e9","High ask":"#f59e0b","Onboarding WIP":"#34d399","Onboarded — Live":"#16a34a","Lost":"#dc2626",
+};
+const PAID_AFF_MAP = {
+  "paid":"Paid","affiliate":"Affiliate","aff":"Affiliate",
+};
+const TARGET_REACHOUTS = 120;
+const TARGET_ONBOARDS = 4;
+
+const MONTH_NUM = { january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11 };
+function norm(v){return (v??"").toString().trim();}
+function titleCase(s){return s.toLowerCase().replace(/\b\w/g, c=>c.toUpperCase());}
+function mapVal(v, dict, fallback){
+  const k = norm(v).toLowerCase();
+  if (!k) return fallback ?? "";
+  return dict[k] ?? titleCase(v.trim());
+}
+function parseDate(s){
+  if (s instanceof Date) return isNaN(s) ? null : s;
+  s = norm(s); if (!s) return null;
+  let m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (m){ let [_,mo,d,y]=m; y=y.length===2?"20"+y:y; const dt=new Date(+y,+mo-1,+d); return isNaN(dt)?null:dt; }
+  const dt=new Date(s); return isNaN(dt)?null:dt;
+}
+function monthSortKey(label){
+  if (!label) return 0;
+  const m = label.trim().match(/^([A-Za-z]+)\s+(\d{4})$/);
+  if (!m){ const dt=new Date(label); return isNaN(dt)?0:dt.getTime(); }
+  const mo=MONTH_NUM[m[1].toLowerCase()]; if (mo==null) return 0;
+  return new Date(+m[2],mo,1).getTime();
+}
+function monthLabelFromDate(dt){ return dt ? dt.toLocaleString("en-US",{month:"long",year:"numeric"}) : ""; }
+function escapeHtml(s){return (s??"").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function escapeAttr(s){return escapeHtml(s).replace(/'/g,"&#39;");}
+function fmtNum(n){ if (n==null||isNaN(n)) return "—"; return n.toLocaleString(undefined,{maximumFractionDigits:0}); }
+function fmtINR(n){ if (n==null||isNaN(n)||!isFinite(n)) return "—"; if (n>=1e7) return "₹"+(n/1e7).toFixed(2)+"Cr"; if (n>=1e5) return "₹"+(n/1e5).toFixed(2)+"L"; if (n>=1000) return "₹"+(n/1000).toFixed(1)+"K"; return "₹"+Math.round(n).toLocaleString(); }
+function safeDiv(a,b){ return b ? a/b : 0; }
+
+// ---------- STATE ----------
+const state = {
+  datasets: { prospects: [], videos: [], targets: null },
+  tab: "prospects",
+  page: { prospects: 0, videos: 0 },
+  pageSize: 50,
+  charts: {},
+  filters: {
+    prospects: { poc:new Set(), month:new Set(), platform:new Set(), destination:new Set(), source:new Set(), status:new Set(), search:"" },
+    videos:    { poc:new Set(), month:new Set(), channel:new Set(), destination:new Set(), source:new Set(), paidAff:new Set(), quality:new Set(), search:"" },
+  },
+};
+
+// ============================================================
+// INTAKE
+// ============================================================
+function getCell(obj, ...names){
+  for (const n of names){
+    for (const k of Object.keys(obj)){
+      if (k.trim().toLowerCase() === n.toLowerCase()) return obj[k];
+    }
+  }
+  return "";
+}
+
+function normalizeProspect(r){
+  const poc = norm(getCell(r,"POC"));
+  const partner = norm(getCell(r,"Partner Name"));
+  if (!poc && !partner) return null;
+  const rawStatus = norm(getCell(r,"Reach out status","Status"));
+  const status = mapVal(rawStatus, STATUS_MAP, "");
+  const platform = mapVal(getCell(r,"Platform"), PLATFORM_MAP, "");
+  const dest = mapVal(getCell(r,"Destination"), DEST_MAP, "");
+  const reachDate = parseDate(getCell(r,"Reachout date  (for new onboards )","Reachout date","Reach out date"));
+  const monthStr = norm(getCell(r,"Month"));
+  const month = monthStr || monthLabelFromDate(reachDate);
+  const subRaw = norm(getCell(r,"Subscriber","Subscribers","Subs/Followers"));
+  const subscribers = parseInt(subRaw.replace(/[^\d]/g,"")) || 0;
+  return {
+    poc: poc ? titleCase(poc) : "—",
+    month, monthSort: monthSortKey(month),
+    reachDate,
+    region: norm(getCell(r,"Region by Source Country")) || "—",
+    source: norm(getCell(r,"Source Country")) || "—",
+    destination: dest || "—",
+    partner, channel: norm(getCell(r,"Channel link")),
+    email: norm(getCell(r,"Email")),
+    subscribers,
+    platform: platform || "—",
+    status: status || "—",
+    lostReason: norm(getCell(r,"Lost reasons")) || "",
+  };
+}
+
+function normalizeVideo(r){
+  const poc = norm(getCell(r,"POC name"));
+  if (!poc) return null;
+  const date = parseDate(getCell(r,"Date"));
+  const month = monthLabelFromDate(date);
+  const channel = mapVal(getCell(r,"Channel"), PLATFORM_MAP, "");
+  const dest = mapVal(getCell(r,"Destination Country","Destination"), DEST_MAP, "");
+  const paidAffRaw = norm(getCell(r,"Paid/affiliate")).toLowerCase();
+  const paidAff = PAID_AFF_MAP[paidAffRaw] || (paidAffRaw ? "Other" : "");
+  const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+  return {
+    poc: titleCase(poc),
+    date, month, monthSort: monthSortKey(month),
+    activity: norm(getCell(r,"Activity")) || "—",
+    partner: norm(getCell(r,"Partner name")),
+    link: norm(getCell(r,"Links of activity","Link of activity")),
+    budget: num(getCell(r,"Budget (INR)")),
+    contentType: norm(getCell(r,"Content Type")) || "—",
+    channel: channel || "—",
+    source: norm(getCell(r,"Source Country")) || "—",
+    destination: dest || "—",
+    region: norm(getCell(r,"Broader region by Source Country")) || "",
+    views: num(getCell(r,"Total views")),
+    traffic: num(getCell(r,"Traffic")),
+    leads: num(getCell(r,"Leads")),
+    bookforms: num(getCell(r,"Bookforms")),
+    bookings: num(getCell(r,"Bookings")),
+    language: norm(getCell(r,"Language")) || "—",
+    paidAff: paidAff || "—",
+    newExisting: norm(getCell(r,"New onboarding / Existing","New onboarding / Existing ")),
+    quality: norm(getCell(r,"Quality")) || "—",
+  };
+}
+
+// Detect sheet type from headers
+function sheetType(headers){
+  const set = new Set(headers.map(h => (h||"").toString().trim().toLowerCase()));
+  if (set.has("total views") && (set.has("leads") || set.has("leads "))) return "videos";
+  if (set.has("reach out status") || set.has("reach out status ")) return "prospects";
+  if (set.has("monthly reach outs target")) return "targets";
+  return null;
+}
+
+async function ingestFile(file){
+  const name = file.name.toLowerCase();
+  document.getElementById("load-status").textContent = "Parsing…";
+  try {
+    if (name.endsWith(".csv")) {
+      const text = await file.text();
+      ingestCsv(text);
+    } else if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+      const buf = await file.arrayBuffer();
+      ingestXlsx(buf);
+    } else {
+      alert("Please drop a .csv or .xlsx file.");
+      return;
+    }
+  } catch (e) {
+    alert("Couldn't parse file: " + e.message);
+    console.error(e);
+  }
+}
+
+function ingestCsv(text){
+  const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+  const headers = parsed.meta.fields || [];
+  const t = sheetType(headers);
+  state.datasets.prospects = [];
+  state.datasets.videos = [];
+  if (t === "videos") {
+    state.datasets.videos = parsed.data.map(normalizeVideo).filter(Boolean);
+  } else {
+    state.datasets.prospects = parsed.data.map(normalizeProspect).filter(Boolean);
+  }
+  onLoad();
+}
+
+function ingestXlsx(buf){
+  const wb = XLSX.read(buf, { type: "array", cellDates: true });
+  const prospects = [], videos = [];
+  let targetsSheet = null;
+  for (const name of wb.SheetNames){
+    const ws = wb.Sheets[name];
+    const data = XLSX.utils.sheet_to_json(ws, { defval: "", raw: true });
+    if (!data.length) continue;
+    const headers = Object.keys(data[0]);
+    const t = sheetType(headers);
+    if (t === "videos") videos.push(...data.map(normalizeVideo).filter(Boolean));
+    else if (t === "prospects" && name.toLowerCase().includes("master prospect")) prospects.push(...data.map(normalizeProspect).filter(Boolean));
+    else if (t === "targets") targetsSheet = data;
+  }
+  // Fallback: if no Master prospect detected, take the largest prospects-typed sheet
+  if (!prospects.length){
+    let best = null, bestN = 0;
+    for (const name of wb.SheetNames){
+      const data = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: "", raw: true });
+      if (!data.length) continue;
+      if (sheetType(Object.keys(data[0])) === "prospects" && data.length > bestN){
+        best = data; bestN = data.length;
+      }
+    }
+    if (best) prospects.push(...best.map(normalizeProspect).filter(Boolean));
+  }
+  state.datasets.prospects = prospects;
+  state.datasets.videos = videos;
+  state.datasets.targets = parseTargets(targetsSheet);
+  onLoad();
+}
+
+function parseTargets(sheet){
+  // We use a fixed per-POC target (120 reach-outs/mo, 4 onboards/mo) — sheet is messy
+  // If a sheet is provided we look for explicit overrides
+  const overrides = {};
+  if (sheet){
+    for (const row of sheet){
+      for (const k of Object.keys(row)){
+        const v = row[k];
+        if (typeof v === "number" && (k.toLowerCase().includes("name") || k.toLowerCase().includes("poc"))){
+          // skip
+        }
+      }
+      // Look for a row with "Name" and "Monthly reach outs target" columns
+      const name = norm(row["Name "] || row["Name"] || row["POC"] || "");
+      const tgt = parseFloat(row["Monthly reach outs target"] || row["Monthly Reach outs Target"] || "");
+      if (name && !isNaN(tgt) && tgt > 0) overrides[titleCase(name)] = tgt;
+    }
+  }
+  return { reachOutPerMonth: TARGET_REACHOUTS, onboardsPerMonth: TARGET_ONBOARDS, overrides };
+}
+
+function onLoad(){
+  document.getElementById("empty-state").classList.add("hidden");
+  document.getElementById("tab-bar").classList.remove("hidden");
+  const p = state.datasets.prospects.length;
+  const v = state.datasets.videos.length;
+  document.querySelector('[data-count="prospects"]').textContent = p;
+  document.querySelector('[data-count="videos"]').textContent = v;
+  document.getElementById("load-status").textContent = `${p.toLocaleString()} prospects · ${v.toLocaleString()} videos`;
+  // Default to whichever has data
+  if (!p && v) state.tab = "videos";
+  switchTab(state.tab);
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(name){
+  state.tab = name;
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+  document.querySelectorAll("[data-tab-content]").forEach(el => el.classList.toggle("hidden", el.dataset.tabContent !== name));
+  if (name === "prospects") { buildProspectFilters(); applyProspectFilters(); }
+  if (name === "videos")    { buildVideoFilters();    applyVideoFilters(); }
+  if (name === "targets")   { renderTargets(); }
+}
+document.querySelectorAll(".tab-btn").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+
+// ============================================================
+// SHARED — multi-select filter UI
+// ============================================================
+function buildFilters(hostId, dataset, filterMap, onChange){
+  const host = document.getElementById(hostId);
+  host.innerHTML = "";
+  for (const [key, conf] of Object.entries(filterMap)){
+    const values = [...new Set(dataset.map(r => r[conf.field]).filter(Boolean))].sort(conf.sort || ((a,b) => a.localeCompare(b)));
+    const wrap = document.createElement("div");
+    wrap.className = "multiselect";
+    wrap.innerHTML = `
+      <label class="block text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-1">${conf.label}</label>
+      <button type="button" class="w-full text-left border border-zinc-300 rounded-lg px-3 py-2 text-sm bg-white hover:bg-zinc-50 truncate" data-toggle="${key}">All</button>
+      <div class="multiselect-list hidden" data-list="${key}">
+        <div class="p-2 border-b border-zinc-200 flex gap-2">
+          <button type="button" class="text-[11px] text-indigo-600 hover:underline" data-action="all" data-key="${key}">Select all</button>
+          <button type="button" class="text-[11px] text-zinc-500 hover:underline" data-action="none" data-key="${key}">Clear</button>
+        </div>
+        ${values.map(v => `<label><input type="checkbox" value="${escapeAttr(v)}" data-filter="${key}" /> <span>${escapeHtml(v)}</span></label>`).join("")}
+      </div>
+    `;
+    host.appendChild(wrap);
+  }
+  // events
+  host.querySelectorAll("[data-toggle]").forEach(btn => {
+    btn.addEventListener("click", e => {
+      const k = btn.dataset.toggle;
+      const list = host.querySelector(`[data-list="${k}"]`);
+      const wasOpen = !list.classList.contains("hidden");
+      host.querySelectorAll(".multiselect-list").forEach(el => el.classList.add("hidden"));
+      if (!wasOpen) list.classList.remove("hidden");
+      e.stopPropagation();
+    });
+  });
+  host.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener("change", () => {
+      const k = cb.dataset.filter, v = cb.value;
+      const set = filterMap[k].set;
+      if (cb.checked) set.add(v); else set.delete(v);
+      updateBtnLabel(host, k, set);
+      onChange();
+    });
+  });
+  host.querySelectorAll("[data-action]").forEach(b => {
+    b.addEventListener("click", e => {
+      e.stopPropagation();
+      const key = b.dataset.key, action = b.dataset.action;
+      const set = filterMap[key].set;
+      set.clear();
+      host.querySelectorAll(`input[data-filter="${key}"]`).forEach(c => {
+        c.checked = action === "all";
+        if (c.checked) set.add(c.value);
+      });
+      updateBtnLabel(host, key, set);
+      onChange();
+    });
+  });
+}
+document.addEventListener("click", e => {
+  if (!e.target.closest(".multiselect")){
+    document.querySelectorAll(".multiselect-list").forEach(el => el.classList.add("hidden"));
+  }
+});
+function updateBtnLabel(host, key, set){
+  const btn = host.querySelector(`[data-toggle="${key}"]`);
+  btn.textContent = set.size === 0 ? "All" : set.size === 1 ? [...set][0] : `${set.size} selected`;
+}
+
+// Click-on-chart-to-filter
+function chartClickFilter(filterTab, filterKey, hostId){
+  return (evt, elements, chart) => {
+    if (!elements.length) return;
+    const label = chart.data.labels[elements[0].index]; if (!label) return;
+    const set = state.filters[filterTab][filterKey];
+    if (set.has(label)) set.delete(label); else set.add(label);
+    const host = document.getElementById(hostId);
+    if (host){
+      const cb = host.querySelector(`input[data-filter="${filterKey}"][value="${CSS.escape(label)}"]`);
+      if (cb) cb.checked = set.has(label);
+      updateBtnLabel(host, filterKey, set);
+    }
+    if (filterTab === "prospects") applyProspectFilters(); else applyVideoFilters();
+  };
+}
+
+// Active chip rendering
+function renderActiveChips(tab, hostId, totalRows){
+  const host = document.getElementById(hostId);
+  const filters = state.filters[tab];
+  const chips = [];
+  for (const [k, set] of Object.entries(filters)) if (set instanceof Set) for (const v of set) chips.push({k,v});
+  host.innerHTML = chips.length
+    ? chips.map(c => `<span class="chip bg-indigo-50 text-indigo-700 border border-indigo-100">${escapeHtml(c.k)}: ${escapeHtml(c.v)} <span class="chip-x" data-rm-tab="${tab}" data-rm-k="${c.k}" data-rm-v="${escapeAttr(c.v)}">×</span></span>`).join("")
+    : `<span class="text-xs text-zinc-400">No filters active · ${totalRows.toLocaleString()} rows</span>`;
+  host.querySelectorAll("[data-rm-k]").forEach(el => {
+    el.addEventListener("click", () => {
+      state.filters[el.dataset.rmTab][el.dataset.rmK].delete(el.dataset.rmV);
+      const filterHost = document.getElementById(tab === "prospects" ? "filters-prospects" : "filters-videos");
+      const cb = filterHost.querySelector(`input[data-filter="${el.dataset.rmK}"][value="${CSS.escape(el.dataset.rmV)}"]`);
+      if (cb) cb.checked = false;
+      updateBtnLabel(filterHost, el.dataset.rmK, state.filters[el.dataset.rmTab][el.dataset.rmK]);
+      if (tab === "prospects") applyProspectFilters(); else applyVideoFilters();
+    });
+  });
+}
+
+function upsertChart(id, config){
+  if (state.charts[id]) state.charts[id].destroy();
+  const ctx = document.getElementById(id); if (!ctx) return;
+  const base = { responsive:true, maintainAspectRatio:false, animation:{duration:250}, plugins:{legend:{display:false}} };
+  config.options = Object.assign({}, base, config.options || {});
+  state.charts[id] = new Chart(ctx, config);
+}
+function cursorHover(){ return (e, els) => { if (e.native && e.native.target) e.native.target.style.cursor = els.length ? "pointer" : "default"; }; }
+function counts(rows, key){
+  const c = new Map();
+  for (const r of rows){ const v=r[key]; if (!v||v==="—") continue; c.set(v,(c.get(v)||0)+1); }
+  return [...c.entries()].sort((a,b)=>b[1]-a[1]);
+}
+
+// ============================================================
+// PROSPECTS TAB
+// ============================================================
+const PROSPECT_FILTERS = {
+  poc:        { label:"POC", field:"poc", set:null },
+  month:      { label:"Month", field:"month", set:null, sort:(a,b)=>monthSortKey(a)-monthSortKey(b) },
+  platform:   { label:"Platform", field:"platform", set:null },
+  destination:{ label:"Destination", field:"destination", set:null },
+  source:     { label:"Source Country", field:"source", set:null },
+  status:     { label:"Status", field:"status", set:null },
+};
+
+function buildProspectFilters(){
+  for (const [k] of Object.entries(PROSPECT_FILTERS)) PROSPECT_FILTERS[k].set = state.filters.prospects[k];
+  buildFilters("filters-prospects", state.datasets.prospects, PROSPECT_FILTERS, applyProspectFilters);
+}
+
+function applyProspectFilters(){
+  const f = state.filters.prospects;
+  const rows = state.datasets.prospects.filter(r => {
+    if (f.poc.size && !f.poc.has(r.poc)) return false;
+    if (f.month.size && !f.month.has(r.month)) return false;
+    if (f.platform.size && !f.platform.has(r.platform)) return false;
+    if (f.destination.size && !f.destination.has(r.destination)) return false;
+    if (f.source.size && !f.source.has(r.source)) return false;
+    if (f.status.size && !f.status.has(r.status)) return false;
+    if (f.search){ const q=f.search.toLowerCase(); const hay=`${r.partner} ${r.email} ${r.source} ${r.destination} ${r.poc}`.toLowerCase(); if (!hay.includes(q)) return false; }
+    return true;
+  });
+  state.prospectFiltered = rows;
+  renderActiveChips("prospects", "active-chips-prospects", rows.length);
+  renderProspectKPIs(rows);
+  renderProspectCharts(rows);
+  state.page.prospects = 0;
+  renderProspectTable(rows);
+}
+
+function renderProspectKPIs(rows){
+  const total = rows.length;
+  const onb = rows.filter(r => r.status === "Onboarded — Live").length;
+  const wip = rows.filter(r => r.status === "Onboarding WIP").length;
+  const lost = rows.filter(r => r.status === "Lost").length;
+  const fu = rows.filter(r => r.status.startsWith("Follow up")).length;
+  const conv = total ? (onb/total)*100 : 0;
+  const uniq = new Set(rows.map(r => (r.partner||"").toLowerCase()).filter(Boolean)).size;
+  const kpis = [
+    { label:"Total prospects", value: total.toLocaleString(), sub:`${uniq.toLocaleString()} unique influencers` },
+    { label:"Onboarded · Live", value: onb.toLocaleString(), sub:`+ ${wip} in progress`, color:"text-emerald-600" },
+    { label:"Conversion rate", value: conv.toFixed(1)+"%", sub:"onboarded / total" },
+    { label:"Active follow-ups", value: fu.toLocaleString(), sub:"FU 1/2/3" },
+    { label:"Lost", value: lost.toLocaleString(), sub: total ? ((lost/total)*100).toFixed(1)+"%" : "", color:"text-rose-600" },
+    { label:"POCs active", value: new Set(rows.map(r=>r.poc)).size, sub:"team members" },
+  ];
+  document.getElementById("kpi-row-prospects").innerHTML = kpis.map(k => `
+    <div class="bg-white rounded-xl border border-zinc-200 p-4">
+      <div class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">${k.label}</div>
+      <div class="text-2xl font-bold mt-1 ${k.color||""}">${k.value}</div>
+      <div class="text-xs text-zinc-500 mt-1">${k.sub||""}</div>
+    </div>`).join("");
+}
+
+function renderProspectCharts(rows){
+  // funnel
+  const stageCounts = STAGE_ORDER.map(s => [s, rows.filter(r => r.status === s).length]);
+  upsertChart("ch-funnel", {
+    type:"bar",
+    data:{ labels: stageCounts.map(s=>s[0]), datasets:[{ data:stageCounts.map(s=>s[1]), backgroundColor:stageCounts.map(s=>STAGE_COLORS[s[0]]||"#a1a1aa"), borderRadius:4 }] },
+    options:{ indexAxis:"y", plugins:{ legend:{display:false} }, scales:{ x:{ ticks:{precision:0} } },
+      onClick: chartClickFilter("prospects","status","filters-prospects"), onHover: cursorHover() },
+  });
+  // month trend
+  const monthCounts = counts(rows,"month").sort((a,b)=>monthSortKey(a[0])-monthSortKey(b[0]));
+  const monthOnb = monthCounts.map(([m]) => rows.filter(r => r.month===m && r.status==="Onboarded — Live").length);
+  upsertChart("ch-month", {
+    type:"bar",
+    data:{ labels:monthCounts.map(m=>m[0]), datasets:[
+      { label:"Outreach", data:monthCounts.map(m=>m[1]), backgroundColor:"#c7d2fe", borderRadius:4, order:2 },
+      { label:"Onboarded", data:monthOnb, type:"line", borderColor:"#16a34a", backgroundColor:"#16a34a", pointRadius:3, tension:.25, yAxisID:"y1", order:1 },
+    ]},
+    options:{ plugins:{ legend:{position:"bottom"} },
+      scales:{ y:{position:"left", beginAtZero:true}, y1:{position:"right", beginAtZero:true, grid:{drawOnChartArea:false}} } },
+  });
+  // POC stacked
+  const pocList = [...new Set(rows.map(r=>r.poc))].map(p => {
+    const sub = rows.filter(r=>r.poc===p);
+    return {
+      poc:p, total:sub.length,
+      onb: sub.filter(r=>r.status==="Onboarded — Live").length,
+      wip: sub.filter(r=>r.status==="Onboarding WIP").length,
+      fu:  sub.filter(r=>r.status.startsWith("Follow up")||r.status==="Replied"||r.status==="In talks").length,
+      contacted: sub.filter(r=>r.status==="Contacted").length,
+      lost: sub.filter(r=>r.status==="Lost").length,
+    };
+  }).filter(p=>p.total).sort((a,b)=>b.onb-a.onb||b.total-a.total);
+  upsertChart("ch-poc", {
+    type:"bar",
+    data:{ labels:pocList.map(p=>p.poc), datasets:[
+      { label:"Onboarded", data:pocList.map(p=>p.onb), backgroundColor:"#16a34a" },
+      { label:"Onboarding WIP", data:pocList.map(p=>p.wip), backgroundColor:"#34d399" },
+      { label:"Follow-ups / In talks", data:pocList.map(p=>p.fu), backgroundColor:"#a78bfa" },
+      { label:"Contacted", data:pocList.map(p=>p.contacted), backgroundColor:"#94a3b8" },
+      { label:"Lost", data:pocList.map(p=>p.lost), backgroundColor:"#dc2626" },
+    ]},
+    options:{ plugins:{legend:{position:"bottom"}}, scales:{ x:{stacked:true}, y:{stacked:true, beginAtZero:true} },
+      onClick: chartClickFilter("prospects","poc","filters-prospects"), onHover: cursorHover() },
+  });
+  // platform
+  const platformCounts = counts(rows,"platform").slice(0,8);
+  upsertChart("ch-platform", {
+    type:"doughnut",
+    data:{ labels:platformCounts.map(p=>p[0]), datasets:[{ data:platformCounts.map(p=>p[1]),
+      backgroundColor:["#6366f1","#ec4899","#f59e0b","#06b6d4","#10b981","#8b5cf6","#ef4444","#64748b"] }] },
+    options:{ plugins:{ legend:{position:"bottom", labels:{boxWidth:10}} },
+      onClick: chartClickFilter("prospects","platform","filters-prospects"), onHover: cursorHover() },
+  });
+  // destinations
+  const destCounts = counts(rows,"destination").slice(0,12);
+  upsertChart("ch-dest", {
+    type:"bar",
+    data:{ labels:destCounts.map(d=>d[0]), datasets:[{ data:destCounts.map(d=>d[1]), backgroundColor:"#6366f1", borderRadius:4 }] },
+    options:{ scales:{ y:{ beginAtZero:true } },
+      onClick: chartClickFilter("prospects","destination","filters-prospects"), onHover: cursorHover() },
+  });
+  // sources
+  const sourceCounts = counts(rows,"source").slice(0,12);
+  upsertChart("ch-source", {
+    type:"bar",
+    data:{ labels:sourceCounts.map(d=>d[0]), datasets:[{ data:sourceCounts.map(d=>d[1]), backgroundColor:"#ec4899", borderRadius:4 }] },
+    options:{ indexAxis:"y", scales:{ x:{beginAtZero:true} },
+      onClick: chartClickFilter("prospects","source","filters-prospects"), onHover: cursorHover() },
+  });
+  // source -> onboarded stacked
+  const sourceAgg = [...new Set(rows.map(r=>r.source))].map(s => {
+    const sub = rows.filter(r=>r.source===s);
+    return {
+      source:s, total:sub.length,
+      onb: sub.filter(r=>r.status==="Onboarded — Live").length,
+      wip: sub.filter(r=>r.status==="Onboarding WIP").length,
+      pipe: sub.filter(r=>r.status.startsWith("Follow up")||r.status==="Replied"||r.status==="In talks"||r.status==="High ask"||r.status==="Contacted").length,
+      lost: sub.filter(r=>r.status==="Lost").length,
+    };
+  }).filter(s=>s.total).sort((a,b)=>b.onb-a.onb||b.total-a.total).slice(0,15);
+  upsertChart("ch-source-onboard", {
+    type:"bar",
+    data:{ labels:sourceAgg.map(s=>s.source), datasets:[
+      { label:"Onboarded", data:sourceAgg.map(s=>s.onb), backgroundColor:"#16a34a" },
+      { label:"Onboarding WIP", data:sourceAgg.map(s=>s.wip), backgroundColor:"#34d399" },
+      { label:"In pipeline", data:sourceAgg.map(s=>s.pipe), backgroundColor:"#a78bfa" },
+      { label:"Lost", data:sourceAgg.map(s=>s.lost), backgroundColor:"#dc2626" },
+    ]},
+    options:{ indexAxis:"y", plugins:{ legend:{position:"bottom"},
+      tooltip:{ callbacks:{ afterLabel: ctx => { const s=sourceAgg[ctx.dataIndex]; return `Conv: ${s.total?((s.onb/s.total)*100).toFixed(1):"0"}% · Total ${s.total}`; } } } },
+      scales:{ x:{stacked:true, beginAtZero:true}, y:{stacked:true} },
+      onClick: chartClickFilter("prospects","source","filters-prospects"), onHover: cursorHover() },
+  });
+  // MoM
+  const monthSeries = monthCounts.map(([m,total]) => ({ month:m, total, onb: rows.filter(r=>r.month===m && r.status==="Onboarded — Live").length }));
+  const momLabels=[], momReach=[], momOnb=[];
+  for (let i=1;i<monthSeries.length;i++){
+    const p=monthSeries[i-1], c=monthSeries[i];
+    momLabels.push(c.month);
+    momReach.push(p.total ? +(((c.total-p.total)/p.total)*100).toFixed(1) : 0);
+    momOnb.push(p.onb ? +(((c.onb-p.onb)/p.onb)*100).toFixed(1) : (c.onb?100:0));
+  }
+  upsertChart("ch-mom", {
+    type:"bar",
+    data:{ labels:momLabels, datasets:[
+      { label:"Outreach %Δ", data:momReach, backgroundColor:momReach.map(v=>v>=0?"#6366f1":"#f43f5e"), borderRadius:4 },
+      { label:"Onboards %Δ", data:momOnb,  backgroundColor:momOnb.map(v=>v>=0?"#16a34a":"#dc2626"), borderRadius:4 },
+    ]},
+    options:{ plugins:{ legend:{position:"bottom"},
+      tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y>=0?"+":""}${ctx.parsed.y}%` } } },
+      scales:{ y:{ ticks:{ callback: v => v+"%" } } } },
+  });
+  // conv by POC
+  const convList = pocList.filter(p=>p.total>=30).map(p=>({ poc:p.poc, rate:(p.onb/p.total)*100, total:p.total }))
+    .sort((a,b)=>b.rate-a.rate);
+  upsertChart("ch-conv", {
+    type:"bar",
+    data:{ labels:convList.map(p=>p.poc), datasets:[{ label:"Conv %", data:convList.map(p=>+p.rate.toFixed(1)), backgroundColor:"#16a34a", borderRadius:4 }] },
+    options:{ plugins:{ tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.y}% (n=${convList[ctx.dataIndex].total})` } } },
+      scales:{ y:{ beginAtZero:true, ticks:{ callback:v => v+"%" } } } },
+  });
+  // lost
+  const lostCounts = counts(rows.filter(r=>r.lostReason),"lostReason").slice(0,10);
+  upsertChart("ch-lost", {
+    type:"bar",
+    data:{ labels:lostCounts.map(l=>l[0]), datasets:[{ data:lostCounts.map(l=>l[1]), backgroundColor:"#f43f5e", borderRadius:4 }] },
+    options:{ indexAxis:"y", scales:{ x:{beginAtZero:true} } },
+  });
+}
+
+function renderProspectTable(rows){
+  const start = state.page.prospects * state.pageSize;
+  const slice = rows.slice(start, start + state.pageSize);
+  document.getElementById("table-body-prospects").innerHTML = slice.map(r => `
+    <tr class="hover:bg-zinc-50">
+      <td class="px-3 py-2 font-medium">${escapeHtml(r.poc)}</td>
+      <td class="px-3 py-2 text-zinc-600">${escapeHtml(r.month)}</td>
+      <td class="px-3 py-2 text-zinc-600">${r.reachDate ? r.reachDate.toISOString().slice(0,10) : ""}</td>
+      <td class="px-3 py-2">${r.channel ? `<a class="text-indigo-600 hover:underline" target="_blank" href="${escapeAttr(r.channel)}">${escapeHtml(r.partner||"—")}</a>` : escapeHtml(r.partner)}</td>
+      <td class="px-3 py-2">${escapeHtml(r.platform)}</td>
+      <td class="px-3 py-2 text-zinc-600">${escapeHtml(r.source)}</td>
+      <td class="px-3 py-2 text-zinc-600">${escapeHtml(r.destination)}</td>
+      <td class="px-3 py-2 text-right tabular-nums">${r.subscribers?r.subscribers.toLocaleString():""}</td>
+      <td class="px-3 py-2"><span class="chip" style="background:${STAGE_COLORS[r.status]||"#e4e4e7"};color:white">${escapeHtml(r.status)}</span></td>
+      <td class="px-3 py-2 text-zinc-500">${escapeHtml(r.lostReason)}</td>
+    </tr>`).join("");
+  document.getElementById("table-meta-prospects").textContent = `${rows.length.toLocaleString()} rows match`;
+  const tp = Math.max(1, Math.ceil(rows.length / state.pageSize));
+  document.getElementById("table-pageinfo-prospects").textContent = `Page ${state.page.prospects+1} of ${tp}`;
+}
+
+// ============================================================
+// VIDEOS TAB
+// ============================================================
+const VIDEO_FILTERS = {
+  poc:        { label:"POC", field:"poc", set:null },
+  month:      { label:"Month", field:"month", set:null, sort:(a,b)=>monthSortKey(a)-monthSortKey(b) },
+  channel:    { label:"Channel", field:"channel", set:null },
+  destination:{ label:"Destination", field:"destination", set:null },
+  source:     { label:"Source Country", field:"source", set:null },
+  paidAff:    { label:"Paid / Affiliate", field:"paidAff", set:null },
+};
+
+function buildVideoFilters(){
+  for (const k of Object.keys(VIDEO_FILTERS)) VIDEO_FILTERS[k].set = state.filters.videos[k];
+  buildFilters("filters-videos", state.datasets.videos, VIDEO_FILTERS, applyVideoFilters);
+}
+
+function applyVideoFilters(){
+  const f = state.filters.videos;
+  const rows = state.datasets.videos.filter(r => {
+    if (f.poc.size && !f.poc.has(r.poc)) return false;
+    if (f.month.size && !f.month.has(r.month)) return false;
+    if (f.channel.size && !f.channel.has(r.channel)) return false;
+    if (f.destination.size && !f.destination.has(r.destination)) return false;
+    if (f.source.size && !f.source.has(r.source)) return false;
+    if (f.paidAff.size && !f.paidAff.has(r.paidAff)) return false;
+    if (f.search){ const q=f.search.toLowerCase(); const hay=`${r.partner} ${r.channel} ${r.source} ${r.destination} ${r.poc}`.toLowerCase(); if (!hay.includes(q)) return false; }
+    return true;
+  });
+  state.videoFiltered = rows;
+  renderActiveChips("videos","active-chips-videos", rows.length);
+  renderVideoKPIs(rows);
+  renderVideoCharts(rows);
+  state.page.videos = 0;
+  renderVideoTable(rows);
+}
+
+function sumField(rows, field){ return rows.reduce((s,r)=>s+(r[field]||0), 0); }
+
+function renderVideoKPIs(rows){
+  const budget = sumField(rows,"budget");
+  const views = sumField(rows,"views");
+  const traffic = sumField(rows,"traffic");
+  const leads = sumField(rows,"leads");
+  const bookforms = sumField(rows,"bookforms");
+  const bookings = sumField(rows,"bookings");
+  const cpv = safeDiv(budget,views);
+  const cpl = safeDiv(budget,leads);
+  const cpb = safeDiv(budget,bookforms);
+  const k = [
+    { label:"Videos live", value: rows.length.toLocaleString(), sub:`${new Set(rows.map(r=>r.partner.toLowerCase()).filter(Boolean)).size} unique partners` },
+    { label:"Total spend", value: fmtINR(budget), sub:`${rows.filter(r=>r.budget>0).length} paid videos` },
+    { label:"Views", value: fmtNum(views), sub:`CPV ${fmtINR(cpv)}` },
+    { label:"Traffic", value: fmtNum(traffic), sub: views? ((traffic/views)*100).toFixed(2)+"% of views" : "" },
+    { label:"Leads", value: fmtNum(leads), sub:`CPL ${fmtINR(cpl)}`, color:"text-emerald-600" },
+    { label:"Bookforms", value: fmtNum(bookforms), sub:`CPB ${fmtINR(cpb)}` },
+    { label:"Bookings", value: fmtNum(bookings), sub: bookforms? ((bookings/bookforms)*100).toFixed(1)+"% of bookforms" : "", color:"text-indigo-600" },
+  ];
+  document.getElementById("kpi-row-videos").innerHTML = k.map(x => `
+    <div class="bg-white rounded-xl border border-zinc-200 p-4">
+      <div class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">${x.label}</div>
+      <div class="text-2xl font-bold mt-1 ${x.color||""}">${x.value}</div>
+      <div class="text-xs text-zinc-500 mt-1">${x.sub||""}</div>
+    </div>`).join("");
+}
+
+function renderVideoCharts(rows){
+  // ----- HTML Funnel -----
+  const v = sumField(rows,"views"), t=sumField(rows,"traffic"), l=sumField(rows,"leads"), b=sumField(rows,"bookforms"), bk=sumField(rows,"bookings");
+  const stages = [
+    { name:"Views", n:v, color:"#6366f1" },
+    { name:"Traffic", n:t, color:"#0ea5e9" },
+    { name:"Leads", n:l, color:"#10b981" },
+    { name:"Bookforms", n:b, color:"#f59e0b" },
+    { name:"Bookings", n:bk, color:"#ec4899" },
+  ];
+  const maxN = stages[0].n || 1;
+  document.getElementById("funnel-html").innerHTML = stages.map((s,i) => {
+    const prev = i>0 ? stages[i-1].n : null;
+    const pctOfTop = ((s.n / maxN) * 100).toFixed(1);
+    const drop = prev!=null ? ((s.n / prev) * 100).toFixed(2) + "% step" : "";
+    return `
+      <div>
+        <div class="flex items-center justify-between text-xs mb-1">
+          <span class="font-medium">${s.name}: <span class="tabular-nums">${fmtNum(s.n)}</span></span>
+          <span class="text-zinc-500">${drop}</span>
+        </div>
+        <div class="funnel-bar" style="width:${Math.max(pctOfTop,1)}%; background:${s.color};"></div>
+      </div>`;
+  }).join("");
+
+  // ----- Paid vs Affiliate cards -----
+  const paidRows = rows.filter(r=>r.paidAff==="Paid");
+  const affRows  = rows.filter(r=>r.paidAff==="Affiliate");
+  const card = (title, rs, color) => {
+    const bud = sumField(rs,"budget"), vw=sumField(rs,"views"), ld=sumField(rs,"leads"), bk=sumField(rs,"bookings");
+    return `<div class="bg-zinc-50 rounded-lg p-3 border border-zinc-200">
+      <div class="text-[11px] uppercase tracking-wide font-semibold ${color}">${title}</div>
+      <div class="text-xl font-bold mt-1">${rs.length} videos</div>
+      <div class="mt-2 space-y-0.5 text-xs">
+        <div class="flex justify-between"><span class="text-zinc-500">Spend</span><span class="font-medium">${fmtINR(bud)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Views</span><span class="font-medium">${fmtNum(vw)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Leads</span><span class="font-medium">${fmtNum(ld)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Bookings</span><span class="font-medium">${fmtNum(bk)}</span></div>
+        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPL</span><span class="font-medium">${fmtINR(safeDiv(bud,ld))}</span></div>
+      </div>
+    </div>`;
+  };
+  document.getElementById("paid-affiliate-cards").innerHTML = card("Paid", paidRows, "text-rose-600") + card("Affiliate", affRows, "text-emerald-600");
+
+  // ----- Trend over time -----
+  const months = [...new Set(rows.map(r=>r.month).filter(Boolean))].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
+  const sumByMonth = (field) => months.map(m => sumField(rows.filter(r=>r.month===m), field));
+  upsertChart("vch-trend", {
+    type:"line",
+    data:{ labels:months, datasets:[
+      { label:"Views", data:sumByMonth("views"), borderColor:"#6366f1", backgroundColor:"#6366f1", tension:.25, yAxisID:"y" },
+      { label:"Traffic", data:sumByMonth("traffic"), borderColor:"#0ea5e9", backgroundColor:"#0ea5e9", tension:.25, yAxisID:"y2" },
+      { label:"Leads", data:sumByMonth("leads"), borderColor:"#10b981", backgroundColor:"#10b981", tension:.25, yAxisID:"y2" },
+      { label:"Bookings", data:sumByMonth("bookings"), borderColor:"#ec4899", backgroundColor:"#ec4899", tension:.25, yAxisID:"y2" },
+    ]},
+    options:{ plugins:{ legend:{position:"bottom"} },
+      scales:{ y:{ position:"left", beginAtZero:true, title:{display:true, text:"Views"} },
+        y2:{ position:"right", beginAtZero:true, grid:{drawOnChartArea:false}, title:{display:true, text:"Traffic / Leads / Bookings"} } } },
+  });
+
+  // ----- Channel performance -----
+  const channels = [...new Set(rows.map(r=>r.channel))].filter(c=>c && c!=="—");
+  const chData = channels.map(c => {
+    const sub = rows.filter(r=>r.channel===c);
+    return { ch:c, bud: sumField(sub,"budget"), vw: sumField(sub,"views"), ld: sumField(sub,"leads"), bk: sumField(sub,"bookings"), n: sub.length };
+  }).sort((a,b)=>b.ld-a.ld);
+  upsertChart("vch-channel", {
+    type:"bar",
+    data:{ labels:chData.map(c=>c.ch), datasets:[
+      { label:"Leads", data:chData.map(c=>c.ld), backgroundColor:"#10b981", yAxisID:"y" },
+      { label:"Bookings", data:chData.map(c=>c.bk), backgroundColor:"#ec4899", yAxisID:"y" },
+      { label:"Spend (₹L)", data:chData.map(c=>+(c.bud/1e5).toFixed(2)), backgroundColor:"#a78bfa", yAxisID:"y2" },
+    ]},
+    options:{ plugins:{ legend:{position:"bottom"},
+      tooltip:{ callbacks:{ afterLabel: ctx => {
+        if (ctx.dataset.label==="Leads"){ const c = chData[ctx.dataIndex]; return `CPL ${fmtINR(safeDiv(c.bud,c.ld))}`; }
+        return ""; } } } },
+      scales:{ y:{position:"left", beginAtZero:true, title:{display:true,text:"Count"} },
+        y2:{ position:"right", beginAtZero:true, grid:{drawOnChartArea:false}, title:{display:true, text:"Spend (₹ lakh)"} } },
+      onClick: chartClickFilter("videos","channel","filters-videos"), onHover: cursorHover() },
+  });
+
+  // ----- Channel efficiency table -----
+  const tbl = document.getElementById("tbl-channel-eff");
+  tbl.innerHTML = `
+    <thead class="bg-zinc-50 text-zinc-600 uppercase tracking-wide">
+      <tr><th class="px-2 py-2 text-left">Channel</th><th class="px-2 py-2 text-right">Videos</th><th class="px-2 py-2 text-right">Spend</th><th class="px-2 py-2 text-right">Views</th><th class="px-2 py-2 text-right">Leads</th><th class="px-2 py-2 text-right">CPV</th><th class="px-2 py-2 text-right">CPL</th><th class="px-2 py-2 text-right">CPB</th></tr>
+    </thead><tbody class="divide-y divide-zinc-100">
+    ${chData.map(c => {
+      const bf = sumField(rows.filter(r=>r.channel===c.ch),"bookforms");
+      return `<tr>
+        <td class="px-2 py-2 font-medium">${escapeHtml(c.ch)}</td>
+        <td class="px-2 py-2 text-right">${c.n}</td>
+        <td class="px-2 py-2 text-right">${fmtINR(c.bud)}</td>
+        <td class="px-2 py-2 text-right">${fmtNum(c.vw)}</td>
+        <td class="px-2 py-2 text-right">${fmtNum(c.ld)}</td>
+        <td class="px-2 py-2 text-right">${fmtINR(safeDiv(c.bud,c.vw))}</td>
+        <td class="px-2 py-2 text-right">${fmtINR(safeDiv(c.bud,c.ld))}</td>
+        <td class="px-2 py-2 text-right">${fmtINR(safeDiv(c.bud,bf))}</td>
+      </tr>`; }).join("")}
+    </tbody>`;
+
+  // ----- POC performance -----
+  const pocs = [...new Set(rows.map(r=>r.poc))];
+  const pocData = pocs.map(p => {
+    const sub = rows.filter(r=>r.poc===p);
+    return { poc:p, ld: sumField(sub,"leads"), bk: sumField(sub,"bookings"), vw: sumField(sub,"views"), bud: sumField(sub,"budget"), n: sub.length };
+  }).filter(p=>p.n).sort((a,b)=>b.ld-a.ld||b.bk-a.bk).slice(0,15);
+  upsertChart("vch-poc", {
+    type:"bar",
+    data:{ labels:pocData.map(p=>p.poc), datasets:[
+      { label:"Leads", data:pocData.map(p=>p.ld), backgroundColor:"#10b981" },
+      { label:"Bookings", data:pocData.map(p=>p.bk), backgroundColor:"#ec4899" },
+    ]},
+    options:{ indexAxis:"y", plugins:{ legend:{position:"bottom"},
+      tooltip:{ callbacks:{ afterLabel: ctx => `Videos: ${pocData[ctx.dataIndex].n} · Spend ${fmtINR(pocData[ctx.dataIndex].bud)}` } } },
+      scales:{ x:{beginAtZero:true} },
+      onClick: chartClickFilter("videos","poc","filters-videos"), onHover: cursorHover() },
+  });
+
+  // ----- Top partners -----
+  const partnerAgg = new Map();
+  for (const r of rows){
+    if (!r.partner) continue;
+    const cur = partnerAgg.get(r.partner) || { ld:0, vw:0, bud:0, n:0 };
+    cur.ld += r.leads; cur.vw += r.views; cur.bud += r.budget; cur.n += 1;
+    partnerAgg.set(r.partner, cur);
+  }
+  const partnerData = [...partnerAgg.entries()].map(([k,v]) => ({partner:k,...v})).sort((a,b)=>b.ld-a.ld).slice(0,15);
+  upsertChart("vch-partner", {
+    type:"bar",
+    data:{ labels:partnerData.map(p=>p.partner), datasets:[{ data:partnerData.map(p=>p.ld), backgroundColor:"#0ea5e9", borderRadius:4 }] },
+    options:{ indexAxis:"y", scales:{ x:{beginAtZero:true} },
+      plugins:{ tooltip:{ callbacks:{ afterLabel: ctx => `${fmtNum(partnerData[ctx.dataIndex].vw)} views · ${fmtINR(partnerData[ctx.dataIndex].bud)} spent` } } } },
+  });
+
+  // ----- Source -> leads -----
+  const sourceAgg = new Map();
+  for (const r of rows){
+    if (!r.source || r.source === "—") continue;
+    const cur = sourceAgg.get(r.source) || { ld:0, vw:0, bk:0 };
+    cur.ld += r.leads; cur.vw += r.views; cur.bk += r.bookings;
+    sourceAgg.set(r.source, cur);
+  }
+  const sourceData = [...sourceAgg.entries()].map(([k,v])=>({k,...v})).sort((a,b)=>b.ld-a.ld).slice(0,12);
+  upsertChart("vch-source", {
+    type:"bar",
+    data:{ labels:sourceData.map(s=>s.k), datasets:[
+      { label:"Leads", data:sourceData.map(s=>s.ld), backgroundColor:"#10b981" },
+      { label:"Bookings", data:sourceData.map(s=>s.bk), backgroundColor:"#ec4899" },
+    ]},
+    options:{ plugins:{ legend:{position:"bottom"} }, scales:{ y:{beginAtZero:true} },
+      onClick: chartClickFilter("videos","source","filters-videos"), onHover: cursorHover() },
+  });
+
+  // ----- Destination -> leads -----
+  const destAgg = new Map();
+  for (const r of rows){
+    if (!r.destination || r.destination === "—") continue;
+    const cur = destAgg.get(r.destination) || { ld:0, bk:0 };
+    cur.ld += r.leads; cur.bk += r.bookings;
+    destAgg.set(r.destination, cur);
+  }
+  const destData = [...destAgg.entries()].map(([k,v])=>({k,...v})).sort((a,b)=>b.ld-a.ld).slice(0,12);
+  upsertChart("vch-dest", {
+    type:"bar",
+    data:{ labels:destData.map(d=>d.k), datasets:[
+      { label:"Leads", data:destData.map(d=>d.ld), backgroundColor:"#10b981" },
+      { label:"Bookings", data:destData.map(d=>d.bk), backgroundColor:"#ec4899" },
+    ]},
+    options:{ plugins:{ legend:{position:"bottom"} }, scales:{ y:{beginAtZero:true} },
+      onClick: chartClickFilter("videos","destination","filters-videos"), onHover: cursorHover() },
+  });
+}
+
+function renderVideoTable(rows){
+  const start = state.page.videos * state.pageSize;
+  const slice = rows.slice(start, start + state.pageSize);
+  document.getElementById("table-body-videos").innerHTML = slice.map(r => `
+    <tr class="hover:bg-zinc-50">
+      <td class="px-3 py-2 text-zinc-600">${r.date ? r.date.toISOString().slice(0,10) : ""}</td>
+      <td class="px-3 py-2 font-medium">${escapeHtml(r.poc)}</td>
+      <td class="px-3 py-2">${r.link ? `<a class="text-indigo-600 hover:underline" target="_blank" href="${escapeAttr(r.link)}">${escapeHtml(r.partner||"—")}</a>` : escapeHtml(r.partner)}</td>
+      <td class="px-3 py-2">${escapeHtml(r.channel)}</td>
+      <td class="px-3 py-2 text-zinc-600">${escapeHtml(r.source)}</td>
+      <td class="px-3 py-2 text-zinc-600">${escapeHtml(r.destination)}</td>
+      <td class="px-3 py-2 text-right tabular-nums">${fmtNum(r.views)}</td>
+      <td class="px-3 py-2 text-right tabular-nums">${fmtNum(r.traffic)}</td>
+      <td class="px-3 py-2 text-right tabular-nums font-medium">${fmtNum(r.leads)}</td>
+      <td class="px-3 py-2 text-right tabular-nums">${fmtNum(r.bookforms)}</td>
+      <td class="px-3 py-2 text-right tabular-nums">${fmtNum(r.bookings)}</td>
+      <td class="px-3 py-2 text-right tabular-nums">${r.budget?fmtINR(r.budget):""}</td>
+      <td class="px-3 py-2"><span class="chip ${r.paidAff==="Paid"?"bg-rose-100 text-rose-700":r.paidAff==="Affiliate"?"bg-emerald-100 text-emerald-700":"bg-zinc-100 text-zinc-600"}">${escapeHtml(r.paidAff||"—")}</span></td>
+      <td class="px-3 py-2 text-zinc-600">${escapeHtml(r.quality)}</td>
+    </tr>`).join("");
+  document.getElementById("table-meta-videos").textContent = `${rows.length.toLocaleString()} videos match`;
+  const tp = Math.max(1, Math.ceil(rows.length / state.pageSize));
+  document.getElementById("table-pageinfo-videos").textContent = `Page ${state.page.videos+1} of ${tp}`;
+}
+
+// ============================================================
+// TARGETS TAB
+// ============================================================
+function renderTargets(){
+  const sel = document.getElementById("target-month");
+  // Use prospect months (these are reach-out months)
+  const months = [...new Set(state.datasets.prospects.map(r => r.month).filter(Boolean))].sort((a,b)=>monthSortKey(b)-monthSortKey(a));
+  if (!sel.options.length || sel.options.length !== months.length){
+    sel.innerHTML = months.map(m => `<option value="${escapeAttr(m)}">${escapeHtml(m)}</option>`).join("");
+  }
+  const month = sel.value || months[0];
+  if (!sel.value && month) sel.value = month;
+  const monthRows = state.datasets.prospects.filter(r => r.month === month);
+  const pocs = [...new Set(state.datasets.prospects.map(r => r.poc))].sort();
+  const data = pocs.map(p => {
+    const sub = monthRows.filter(r => r.poc === p);
+    const reach = sub.length;
+    const onb = sub.filter(r => r.status === "Onboarded — Live").length;
+    const reachTarget = (state.datasets.targets && state.datasets.targets.overrides[p]) || TARGET_REACHOUTS;
+    const reachPct = reachTarget ? (reach/reachTarget)*100 : 0;
+    const onbPct = TARGET_ONBOARDS ? (onb/TARGET_ONBOARDS)*100 : 0;
+    return { poc:p, reach, reachTarget, reachPct, onb, onbTarget:TARGET_ONBOARDS, onbPct };
+  }).filter(r => r.reach>0 || r.onb>0).sort((a,b)=>b.reachPct-a.reachPct);
+
+  // Table
+  document.getElementById("tbl-targets").innerHTML = `
+    <thead class="bg-zinc-50 text-zinc-600 uppercase tracking-wide">
+      <tr><th class="px-3 py-2 text-left">POC</th><th class="px-3 py-2 text-right">Reach-outs</th><th class="px-3 py-2 text-right">Target</th><th class="px-3 py-2 text-left">Attainment</th><th class="px-3 py-2 text-right">Onboards</th><th class="px-3 py-2 text-right">Target</th><th class="px-3 py-2 text-left">Attainment</th></tr>
+    </thead><tbody class="divide-y divide-zinc-100">
+      ${data.map(d => {
+        const reachBar = Math.min(d.reachPct, 200);
+        const onbBar = Math.min(d.onbPct, 200);
+        const reachColor = d.reachPct >= 100 ? "bg-emerald-500" : d.reachPct >= 70 ? "bg-amber-500" : "bg-rose-500";
+        const onbColor = d.onbPct >= 100 ? "bg-emerald-500" : d.onbPct >= 50 ? "bg-amber-500" : "bg-rose-500";
+        return `<tr>
+          <td class="px-3 py-2 font-medium">${escapeHtml(d.poc)}</td>
+          <td class="px-3 py-2 text-right tabular-nums">${d.reach}</td>
+          <td class="px-3 py-2 text-right text-zinc-500 tabular-nums">${d.reachTarget}</td>
+          <td class="px-3 py-2"><div class="flex items-center gap-2"><div class="flex-1 bg-zinc-100 rounded h-2 overflow-hidden"><div class="${reachColor} h-full" style="width:${reachBar/2}%"></div></div><span class="text-xs w-12 text-right tabular-nums">${d.reachPct.toFixed(0)}%</span></div></td>
+          <td class="px-3 py-2 text-right tabular-nums">${d.onb}</td>
+          <td class="px-3 py-2 text-right text-zinc-500 tabular-nums">${d.onbTarget}</td>
+          <td class="px-3 py-2"><div class="flex items-center gap-2"><div class="flex-1 bg-zinc-100 rounded h-2 overflow-hidden"><div class="${onbColor} h-full" style="width:${onbBar/2}%"></div></div><span class="text-xs w-12 text-right tabular-nums">${d.onbPct.toFixed(0)}%</span></div></td>
+        </tr>`;
+      }).join("")}
+    </tbody>`;
+
+  // Reach-out chart
+  upsertChart("tch-reach", {
+    type:"bar",
+    data:{ labels:data.map(d=>d.poc), datasets:[
+      { label:"Actual", data:data.map(d=>d.reach), backgroundColor:"#6366f1", borderRadius:4 },
+      { label:"Target", data:data.map(d=>d.reachTarget), backgroundColor:"#e4e4e7", borderRadius:4 },
+    ]},
+    options:{ indexAxis:"y", plugins:{ legend:{position:"bottom"} }, scales:{ x:{beginAtZero:true} } },
+  });
+  // Onboard chart
+  upsertChart("tch-onboard", {
+    type:"bar",
+    data:{ labels:data.map(d=>d.poc), datasets:[
+      { label:"Actual", data:data.map(d=>d.onb), backgroundColor:"#16a34a", borderRadius:4 },
+      { label:"Target", data:data.map(d=>d.onbTarget), backgroundColor:"#e4e4e7", borderRadius:4 },
+    ]},
+    options:{ indexAxis:"y", plugins:{ legend:{position:"bottom"} }, scales:{ x:{beginAtZero:true} } },
+  });
+}
+document.getElementById("target-month").addEventListener("change", renderTargets);
+
+// ============================================================
+// SEARCH / PAGE / RESET / EXPORT wiring
+// ============================================================
+document.querySelectorAll("[data-search]").forEach(inp => {
+  inp.addEventListener("input", e => {
+    state.filters[inp.dataset.search].search = e.target.value.trim();
+    state.page[inp.dataset.search] = 0;
+    if (inp.dataset.search === "prospects") applyProspectFilters(); else applyVideoFilters();
+  });
+});
+document.querySelectorAll("[data-page]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.page, dir = +btn.dataset.dir;
+    const rows = tab === "prospects" ? state.prospectFiltered : state.videoFiltered;
+    const max = Math.ceil((rows||[]).length / state.pageSize) - 1;
+    state.page[tab] = Math.max(0, Math.min(max, state.page[tab] + dir));
+    if (tab === "prospects") renderProspectTable(rows); else renderVideoTable(rows);
+  });
+});
+document.querySelectorAll("[data-reset]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.reset;
+    for (const k of Object.keys(state.filters[tab])) if (state.filters[tab][k] instanceof Set) state.filters[tab][k].clear();
+    state.filters[tab].search = "";
+    document.querySelectorAll(`[data-search="${tab}"]`).forEach(i => i.value = "");
+    const host = document.getElementById(tab === "prospects" ? "filters-prospects" : "filters-videos");
+    host.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    host.querySelectorAll("[data-toggle]").forEach(b => b.textContent = "All");
+    if (tab === "prospects") applyProspectFilters(); else applyVideoFilters();
+  });
+});
+document.querySelectorAll("[data-export]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.export;
+    const rows = tab === "prospects" ? state.prospectFiltered : state.videoFiltered;
+    if (!rows || !rows.length) return;
+    const cols = tab === "prospects"
+      ? ["poc","month","reachDate","partner","platform","source","destination","subscribers","status","lostReason","channel","email"]
+      : ["date","poc","partner","channel","source","destination","views","traffic","leads","bookforms","bookings","budget","paidAff","contentType","quality","link"];
+    const lines = [cols.join(",")];
+    for (const r of rows){
+      lines.push(cols.map(c => {
+        let v = r[c]; if (v instanceof Date) v = v.toISOString().slice(0,10);
+        if (v == null) v = ""; v = String(v).replace(/"/g,'""');
+        return /[",\n]/.test(v) ? `"${v}"` : v;
+      }).join(","));
+    }
+    const blob = new Blob([lines.join("\n")], { type:"text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `${tab}-filtered.csv`; a.click();
+    URL.revokeObjectURL(url);
+  });
+});
+
+// File input + drop
+document.getElementById("file-input").addEventListener("change", e => { const f = e.target.files[0]; if (f) ingestFile(f); });
+const empty = document.getElementById("empty-state");
+["dragenter","dragover"].forEach(ev => empty.addEventListener(ev, e => { e.preventDefault(); empty.classList.add("drop-active"); }));
+["dragleave","drop"].forEach(ev => empty.addEventListener(ev, e => { e.preventDefault(); empty.classList.remove("drop-active"); }));
+empty.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) ingestFile(f); });
+
+async function loadSample(){
+  try {
+    document.getElementById("load-status").textContent = "Loading workbook…";
+    let res = await fetch(SAMPLE_XLSX);
+    if (res.ok){ const buf = await res.arrayBuffer(); ingestXlsx(buf); return; }
+    res = await fetch(SAMPLE_CSV);
+    if (res.ok){ const text = await res.text(); ingestCsv(text); return; }
+    throw new Error("Sample not found over HTTP. If you opened this with file://, use Upload.");
+  } catch (e) { alert(e.message); }
+}
+document.getElementById("load-sample").addEventListener("click", loadSample);
+document.getElementById("load-sample-2").addEventListener("click", loadSample);
+</script>
+</body>
+</html>
