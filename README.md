@@ -16,7 +16,7 @@ Single-file dashboard for Amber's influencer marketing team. Replaces fragile Ex
 
 ```bash
 # clone
-git clone https://github.com/kaustubhbamber/influencerdashboard.git
+git clone https://github.com/shravasti-amber/influencerdashboard.git
 cd influencerdashboard
 
 # serve it locally (data files are git-ignored, so place your .xlsx in this folder)
@@ -24,7 +24,7 @@ python3 -m http.server 8765
 # then open http://localhost:8765/
 ```
 
-**Deployed version:** https://kaustubhbamber.github.io/influencerdashboard/ — upload your workbook through the Upload button. No data is sent to a server; parsing happens entirely in your browser.
+**Deployed version:** Vercel (set via `vercel.json`). Upload your workbook through the Upload button — no data is sent to a server; parsing happens entirely in your browser.
 
 Or **double-click `index.html`** locally and use the Upload button. (The "Load current workbook" auto-loader only works over `http://`, not `file://`, due to browser security.)
 
