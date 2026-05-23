@@ -358,7 +358,13 @@ function getCell(obj, ...names){
 }
 
 function normalizeProspect(r){
-  const poc = norm(getCell(r,"POC"));
+  let poc = norm(getCell(r,"POC"));
+  if (!poc) {
+    // Fallback: if the POC header was renamed/blanked in the source sheet,
+    // try the first column — POC has always been the first column historically.
+    const firstKey = Object.keys(r)[0];
+    if (firstKey) poc = norm(r[firstKey]);
+  }
   const partner = norm(getCell(r,"Partner Name"));
   if (!poc && !partner) return null;
   const rawStatus = norm(getCell(r,"Reach out status","Status"));
