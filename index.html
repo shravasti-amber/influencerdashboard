@@ -44,8 +44,13 @@
       <span id="load-status" class="text-xs text-zinc-500"></span>
       <label class="cursor-pointer inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-2 rounded-lg">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        Upload .xlsx or .csv
+        Upload Prospects
         <input id="file-input" type="file" accept=".csv,.xlsx,.xls" class="hidden" />
+      </label>
+      <label class="cursor-pointer inline-flex items-center gap-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white text-sm font-medium px-3 py-2 rounded-lg">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload Growth Tracker
+        <input id="file-input-videos" type="file" accept=".csv,.xlsx,.xls" class="hidden" />
       </label>
       <button id="load-sample" class="text-sm px-3 py-2 rounded-lg border border-zinc-300 hover:bg-zinc-100">Load current workbook</button>
     </div>
@@ -77,7 +82,6 @@
         <div id="active-chips-prospects" class="flex flex-wrap gap-1.5"></div>
         <div class="flex items-center gap-2">
           <button data-reset="prospects" class="text-xs px-2.5 py-1.5 rounded-md border border-zinc-300 hover:bg-zinc-100">Reset filters</button>
-          <button data-export="prospects" class="text-xs px-2.5 py-1.5 rounded-md bg-zinc-900 text-white hover:bg-zinc-800">Export filtered CSV</button>
         </div>
       </div>
     </section>
@@ -106,24 +110,6 @@
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Why we lose deals</h3><span class="text-xs text-zinc-500">lost reasons</span></div><div class="h-[340px]"><canvas id="ch-lost"></canvas></div></div>
     </section>
 
-    <section class="bg-white rounded-xl border border-zinc-200">
-      <div class="p-4 flex items-center justify-between gap-3 flex-wrap border-b border-zinc-200">
-        <div><h3 class="font-semibold text-sm">Prospects</h3><p class="text-xs text-zinc-500" id="table-meta-prospects"></p></div>
-        <input type="text" placeholder="Search partner, email, country..." class="text-sm border border-zinc-300 rounded-lg px-3 py-1.5 w-72" data-search="prospects" />
-      </div>
-      <div class="overflow-x-auto scrollbar-thin">
-        <table class="min-w-full text-xs">
-          <thead class="bg-zinc-50 text-zinc-600 uppercase tracking-wide">
-            <tr><th class="px-3 py-2 text-left">POC</th><th class="px-3 py-2 text-left">Month</th><th class="px-3 py-2 text-left">Reachout</th><th class="px-3 py-2 text-left">Partner</th><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-left">Source</th><th class="px-3 py-2 text-left">Destination</th><th class="px-3 py-2 text-right">Subs</th><th class="px-3 py-2 text-left">Status</th><th class="px-3 py-2 text-left">Lost reason</th></tr>
-          </thead>
-          <tbody id="table-body-prospects" class="divide-y divide-zinc-100"></tbody>
-        </table>
-      </div>
-      <div class="p-3 flex items-center justify-between text-xs text-zinc-500 border-t border-zinc-200">
-        <span id="table-pageinfo-prospects"></span>
-        <div class="flex gap-1"><button data-page="prospects" data-dir="-1" class="px-2 py-1 rounded border border-zinc-300 hover:bg-zinc-100">Prev</button><button data-page="prospects" data-dir="1" class="px-2 py-1 rounded border border-zinc-300 hover:bg-zinc-100">Next</button></div>
-      </div>
-    </section>
   </div>
 
   <!-- ====================== VIDEOS TAB ====================== -->
@@ -135,7 +121,6 @@
         <div id="active-chips-videos" class="flex flex-wrap gap-1.5"></div>
         <div class="flex items-center gap-2">
           <button data-reset="videos" class="text-xs px-2.5 py-1.5 rounded-md border border-zinc-300 hover:bg-zinc-100">Reset filters</button>
-          <button data-export="videos" class="text-xs px-2.5 py-1.5 rounded-md bg-zinc-900 text-white hover:bg-zinc-800">Export filtered CSV</button>
         </div>
       </div>
     </section>
@@ -195,23 +180,6 @@
       </div>
     </section>
 
-    <section class="bg-white rounded-xl border border-zinc-200">
-      <div class="p-4 flex items-center justify-between gap-3 flex-wrap border-b border-zinc-200">
-        <div><h3 class="font-semibold text-sm">Videos</h3><p class="text-xs text-zinc-500" id="table-meta-videos"></p></div>
-        <input type="text" placeholder="Search partner, channel..." class="text-sm border border-zinc-300 rounded-lg px-3 py-1.5 w-72" data-search="videos" />
-      </div>
-      <div class="overflow-x-auto scrollbar-thin">
-        <table class="min-w-full text-xs">
-          <thead class="bg-zinc-50 text-zinc-600 uppercase tracking-wide">
-            <tr><th class="px-3 py-2 text-left">Date</th><th class="px-3 py-2 text-left">POC</th><th class="px-3 py-2 text-left">Partner</th><th class="px-3 py-2 text-left">Channel</th><th class="px-3 py-2 text-left">Source</th><th class="px-3 py-2 text-left">Dest</th><th class="px-3 py-2 text-right">Views</th><th class="px-3 py-2 text-right">Traffic</th><th class="px-3 py-2 text-right">Leads</th><th class="px-3 py-2 text-right">Bookforms</th><th class="px-3 py-2 text-right">Bookings</th><th class="px-3 py-2 text-right">Budget ₹</th><th class="px-3 py-2 text-left">P/A</th><th class="px-3 py-2 text-left">Quality</th></tr>
-          </thead>
-          <tbody id="table-body-videos" class="divide-y divide-zinc-100"></tbody>
-        </table>
-      </div>
-      <div class="p-3 flex items-center justify-between text-xs text-zinc-500 border-t border-zinc-200">
-        <span id="table-pageinfo-videos"></span>
-        <div class="flex gap-1"><button data-page="videos" data-dir="-1" class="px-2 py-1 rounded border border-zinc-300 hover:bg-zinc-100">Prev</button><button data-page="videos" data-dir="1" class="px-2 py-1 rounded border border-zinc-300 hover:bg-zinc-100">Next</button></div>
-      </div>
     </section>
   </div>
 
@@ -502,7 +470,7 @@ function ingestCsv(text){
 
 function ingestXlsx(buf){
   const wb = XLSX.read(buf, { type: "array", cellDates: true });
-  const prospects = [], videos = [];
+  const prospects = [];
   let targetsSheet = null;
   for (const name of wb.SheetNames){
     const ws = wb.Sheets[name];
@@ -510,8 +478,7 @@ function ingestXlsx(buf){
     if (!data.length) continue;
     const headers = Object.keys(data[0]);
     const t = sheetType(headers);
-    if (t === "videos") videos.push(...data.map(normalizeVideo).filter(Boolean));
-    else if (t === "prospects" && name.toLowerCase().includes("master prospect")) prospects.push(...data.map(normalizeProspect).filter(Boolean));
+    if (t === "prospects" && name.toLowerCase().includes("master prospect")) prospects.push(...data.map(normalizeProspect).filter(Boolean));
     else if (t === "targets") targetsSheet = data;
   }
   // Fallback: if no Master prospect detected, take the largest prospects-typed sheet
@@ -527,7 +494,6 @@ function ingestXlsx(buf){
     if (best) prospects.push(...best.map(normalizeProspect).filter(Boolean));
   }
   state.datasets.prospects = prospects;
-  state.datasets.videos = videos;
   state.datasets.targets = parseTargets(targetsSheet);
   onLoad();
 }
@@ -767,12 +733,12 @@ function renderProspectKPIs(rows){
   const wip = rows.filter(r => r.status === "Onboarding WIP").length;
   const lost = rows.filter(r => r.status === "Lost").length;
   const fu = rows.filter(r => r.status.startsWith("Follow up")).length;
-  const conv = total ? (onb/total)*100 : 0;
+  const conv = total ? ((onb+wip)/total)*100 : 0;
   const uniq = new Set(rows.map(r => (r.partner||"").toLowerCase()).filter(Boolean)).size;
   const kpis = [
     { label:"Total prospects", value: total.toLocaleString(), sub:`${uniq.toLocaleString()} unique influencers` },
     { label:"Onboarded · Live", value: onb.toLocaleString(), sub:`+ ${wip} in progress`, color:"text-emerald-600" },
-    { label:"Conversion rate", value: conv.toFixed(1)+"%", sub:"onboarded / total" },
+    { label:"Conversion rate", value: conv.toFixed(1)+"%", sub:"(onboarded + WIP) / total" },
     { label:"Active follow-ups", value: fu.toLocaleString(), sub:"FU 1/2/3" },
     { label:"Lost", value: lost.toLocaleString(), sub: total ? ((lost/total)*100).toFixed(1)+"%" : "", color:"text-rose-600" },
     { label:"POCs active", value: new Set(rows.map(r=>r.poc)).size, sub:"team members" },
@@ -948,9 +914,11 @@ function renderProspectCharts(rows){
 }
 
 function renderProspectTable(rows){
+  const tbody = document.getElementById("table-body-prospects");
+  if (!tbody) return;
   const start = state.page.prospects * state.pageSize;
   const slice = rows.slice(start, start + state.pageSize);
-  document.getElementById("table-body-prospects").innerHTML = slice.map(r => `
+  tbody.innerHTML = slice.map(r => `
     <tr class="hover:bg-zinc-50">
       <td class="px-3 py-2 font-medium">${escapeHtml(r.poc)}</td>
       <td class="px-3 py-2 text-zinc-600">${escapeHtml(r.month)}</td>
@@ -963,7 +931,7 @@ function renderProspectTable(rows){
       <td class="px-3 py-2"><span class="chip" style="background:${STAGE_COLORS[r.status]||"#e4e4e7"};color:white">${escapeHtml(r.status)}</span></td>
       <td class="px-3 py-2 text-zinc-500">${escapeHtml(r.lostReason)}</td>
     </tr>`).join("");
-  document.getElementById("table-meta-prospects").textContent = `${rows.length.toLocaleString()} rows match`;
+  const tmP = document.getElementById("table-meta-prospects"); if (tmP) tmP.textContent = `${rows.length.toLocaleString()} rows match`;
   const tp = Math.max(1, Math.ceil(rows.length / state.pageSize));
   document.getElementById("table-pageinfo-prospects").textContent = `Page ${state.page.prospects+1} of ${tp}`;
 }
@@ -1018,7 +986,7 @@ function renderVideoKPIs(rows){
   const cpl = safeDiv(budget,leads);
   const cpb = safeDiv(budget,bookforms);
   const k = [
-    { label:"Videos live", value: rows.length.toLocaleString(), sub:`${new Set(rows.map(r=>r.partner.toLowerCase()).filter(Boolean)).size} unique partners` },
+    { label:"Videos live", value: rows.filter(r=>r.activity && r.activity !== "—").length.toLocaleString(), sub:`${new Set(rows.map(r=>r.partner.toLowerCase()).filter(Boolean)).size} unique partners` },
     { label:"Total spend", value: fmtINR(budget), sub:`${rows.filter(r=>r.budget>0).length} paid videos` },
     { label:"Views", value: fmtNum(views), sub:`CPV ₹${fmtDecimal(cpv)}` },
     { label:"Traffic", value: fmtNum(traffic), sub: views && leads ? ((leads/traffic)*100).toFixed(2)+"% of traffic → leads" : "" },
@@ -1234,9 +1202,11 @@ function renderVideoCharts(rows){
 }
 
 function renderVideoTable(rows){
+  const tbodyV = document.getElementById("table-body-videos");
+  if (!tbodyV) return;
   const start = state.page.videos * state.pageSize;
   const slice = rows.slice(start, start + state.pageSize);
-  document.getElementById("table-body-videos").innerHTML = slice.map(r => `
+  tbodyV.innerHTML = slice.map(r => `
     <tr class="hover:bg-zinc-50">
       <td class="px-3 py-2 text-zinc-600">${r.date ? r.date.toISOString().slice(0,10) : ""}</td>
       <td class="px-3 py-2 font-medium">${escapeHtml(r.poc)}</td>
@@ -1253,7 +1223,7 @@ function renderVideoTable(rows){
       <td class="px-3 py-2"><span class="chip ${r.paidAff==="Paid"?"bg-rose-100 text-rose-700":r.paidAff==="Affiliate"?"bg-emerald-100 text-emerald-700":"bg-zinc-100 text-zinc-600"}">${escapeHtml(r.paidAff||"—")}</span></td>
       <td class="px-3 py-2 text-zinc-600">${escapeHtml(r.quality)}</td>
     </tr>`).join("");
-  document.getElementById("table-meta-videos").textContent = `${rows.length.toLocaleString()} videos match`;
+  const tmV = document.getElementById("table-meta-videos"); if (tmV) tmV.textContent = `${rows.length.toLocaleString()} videos match`;
   const tp = Math.max(1, Math.ceil(rows.length / state.pageSize));
   document.getElementById("table-pageinfo-videos").textContent = `Page ${state.page.videos+1} of ${tp}`;
 }
@@ -1314,6 +1284,40 @@ document.querySelectorAll("[data-export]").forEach(btn => {
 
 // File input + drop
 document.getElementById("file-input").addEventListener("change", e => { const f = e.target.files[0]; if (f) ingestFile(f); });
+document.getElementById("file-input-videos").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  const name = f.name.toLowerCase();
+  document.getElementById("load-status").textContent = "Parsing Videos…";
+  if (name.endsWith(".csv")) {
+    f.text().then(text => {
+      const parsed = Papa.parse(text, { header:true, skipEmptyLines:true });
+      state.datasets.videos = parsed.data.map(normalizeVideo).filter(Boolean);
+      document.querySelector('[data-count="videos"]').textContent = state.datasets.videos.length;
+      document.getElementById("load-status").textContent = `${state.datasets.prospects.length.toLocaleString()} prospects · ${state.datasets.videos.length.toLocaleString()} videos`;
+      document.getElementById("tab-bar").classList.remove("hidden");
+      document.getElementById("empty-state").classList.add("hidden");
+      if (state.tab === "videos") { buildVideoFilters(); applyVideoFilters(); }
+    });
+  } else {
+    f.arrayBuffer().then(buf => {
+      const wb = XLSX.read(buf, { type:"array", cellDates:true });
+      const videos = [];
+      for (const name of wb.SheetNames) {
+        const ws = wb.Sheets[name];
+        const data = XLSX.utils.sheet_to_json(ws, { defval:"", raw:true });
+        if (!data.length) continue;
+        const t = sheetType(Object.keys(data[0]));
+        if (t === "videos") videos.push(...data.map(normalizeVideo).filter(Boolean));
+      }
+      state.datasets.videos = videos;
+      document.querySelector('[data-count="videos"]').textContent = state.datasets.videos.length;
+      document.getElementById("load-status").textContent = `${state.datasets.prospects.length.toLocaleString()} prospects · ${state.datasets.videos.length.toLocaleString()} videos`;
+      document.getElementById("tab-bar").classList.remove("hidden");
+      document.getElementById("empty-state").classList.add("hidden");
+      if (state.tab === "videos") { buildVideoFilters(); applyVideoFilters(); }
+    });
+  }
+});
 const empty = document.getElementById("empty-state");
 ["dragenter","dragover"].forEach(ev => empty.addEventListener(ev, e => { e.preventDefault(); empty.classList.add("drop-active"); }));
 ["dragleave","drop"].forEach(ev => empty.addEventListener(ev, e => { e.preventDefault(); empty.classList.remove("drop-active"); }));
