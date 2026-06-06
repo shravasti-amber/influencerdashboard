@@ -98,16 +98,55 @@
       <!-- Section 2 — Channel & Geography Mix -->
       <div class="lg:col-span-12 -mb-2 pt-3"><h2 class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Channel & Geography Mix</h2></div>
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Platform mix</h3><span class="text-xs text-zinc-500">share of outreach</span></div><div class="h-[340px]"><canvas id="ch-platform"></canvas></div></div>
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Platform mix (onboarded)</h3><span class="text-xs text-zinc-500">share of partners onboarded</span></div><div class="h-[340px]"><canvas id="ch-platform-onboarded"></canvas></div></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6">
+        <div class="flex items-center justify-between mb-3"><h3 class="font-semibold text-sm">Channel-wise Onboarded</h3><span class="text-xs text-zinc-500">onboarded partners by platform</span></div>
+        <table class="w-full text-sm" id="tbl-channel-onboarded">
+          <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]">
+            <tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">Onboarded</th></tr>
+          </thead>
+          <tbody id="tbl-channel-onboarded-body" class="divide-y divide-zinc-100"></tbody>
+          <tfoot id="tbl-channel-onboarded-foot" class="bg-zinc-50 font-semibold text-sm"></tfoot>
+        </table>
+      </div>
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Top destinations</h3><span class="text-xs text-zinc-500">where influencers are sent</span></div><div class="h-[300px]"><canvas id="ch-dest"></canvas></div></div>
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Top source countries</h3><span class="text-xs text-zinc-500">overall count</span></div><div class="h-[300px]"><canvas id="ch-source"></canvas></div></div>
 
       <!-- Section 3 — Deep Dive Analytics -->
       <div class="lg:col-span-12 -mb-2 pt-3"><h2 class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Deep Dive Analytics</h2></div>
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-8"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Source → onboarded</h3><div class="flex gap-2"><button id="toggle-source-view" class="text-xs px-3 py-1 rounded border border-zinc-300 bg-white hover:bg-zinc-100" data-view="country">By Country</button><button id="toggle-region-view" class="text-xs px-3 py-1 rounded border border-zinc-300 bg-indigo-600 text-white hover:bg-indigo-700" data-view="region">By Region</button></div></div><div class="h-[420px]"><canvas id="ch-source-onboard"></canvas></div></div>
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-4"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Month-over-month growth</h3><span class="text-xs text-zinc-500">% change vs previous month</span></div><div class="h-[420px]"><canvas id="ch-mom"></canvas></div></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-4"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Month-over-month</h3><span class="text-xs text-zinc-500">this month vs last month</span></div><div class="h-[420px]"><canvas id="ch-mom"></canvas></div></div>
+      <!-- Weekly progress table — placed below conv/lost charts, full width -->
+
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Conversion rate by POC</h3><span class="text-xs text-zinc-500">all POCs</span></div><div class="h-[340px]"><canvas id="ch-conv"></canvas></div></div>
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Why we lose deals</h3><span class="text-xs text-zinc-500">lost reasons</span></div><div class="h-[340px]"><canvas id="ch-lost"></canvas></div></div>
+
+      <!-- Weekly progress table -->
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="font-semibold text-sm">Weekly progress by POC</h3>
+            <p class="text-xs text-zinc-500 mt-0.5" id="weekly-chart-subtitle">week-by-week reach-outs · onboards for selected month</p>
+          </div>
+          <span id="weekly-chart-warning" class="hidden text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-3 py-1.5">Select a single month to see weekly breakdown</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs" id="weekly-progress-table">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]">
+              <tr>
+                <th class="px-3 py-2 text-left">POC</th>
+                <th class="px-3 py-2 text-right">Week 1<br><span class="normal-case font-normal text-zinc-400">1–7</span></th>
+                <th class="px-3 py-2 text-right">Week 2<br><span class="normal-case font-normal text-zinc-400">8–15</span></th>
+                <th class="px-3 py-2 text-right">Week 3<br><span class="normal-case font-normal text-zinc-400">16–23</span></th>
+                <th class="px-3 py-2 text-right">Week 4<br><span class="normal-case font-normal text-zinc-400">24–end</span></th>
+                <th class="px-3 py-2 text-right font-semibold text-zinc-700">Total Reachouts</th>
+                <th class="px-3 py-2 text-right text-emerald-700">Onboarded</th>
+              </tr>
+            </thead>
+            <tbody id="weekly-progress-tbody" class="divide-y divide-zinc-100"></tbody>
+            <tfoot id="weekly-progress-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
+          </table>
+        </div>
+      </div>
     </section>
 
   </div>
@@ -276,7 +315,16 @@ function parseDate(s){
   s = norm(s); if (!s) return null;
   const fixed = fixMonthSpelling(s);
   let m = fixed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
-  if (m){ let [_,mo,d,y]=m; y=y.length===2?"20"+y:y; const dt=new Date(+y,+mo-1,+d); return correctTypoYear(dt); }
+  if (m){
+    let [_,a,b,y] = m;
+    y = y.length===2 ? "20"+y : y;
+    const n1=+a, n2=+b;
+    // Treat as dd/mm/yyyy (Indian sheet format). If first number >12 it must be day anyway.
+    let day=n1, month=n2;
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    const dt = new Date(+y, month-1, day);
+    return correctTypoYear(dt);
+  }
   const dt=new Date(fixed); return isNaN(dt) ? null : correctTypoYear(dt);
 }
 function monthSortKey(label){
@@ -678,7 +726,10 @@ const PROSPECT_FILTERS = {
 
 function buildProspectFilters(){
   for (const [k] of Object.entries(PROSPECT_FILTERS)) PROSPECT_FILTERS[k].set = state.filters.prospects[k];
-  buildFilters("filters-prospects", state.datasets.prospects, PROSPECT_FILTERS, applyProspectFilters);
+  // Filter out months before January 2026 from the month dropdown
+  const JAN_2026 = new Date(2026, 0, 1).getTime();
+  const prospectsFrom2026 = state.datasets.prospects.filter(r => monthSortKey(r.month) >= JAN_2026);
+  buildFilters("filters-prospects", prospectsFrom2026, PROSPECT_FILTERS, applyProspectFilters);
 }
 
 function applyProspectFilters(){
@@ -809,14 +860,21 @@ function renderProspectCharts(rows){
   });
   // platform mix for onboarded
   const onboardedRows = rows.filter(r => r.status === "Onboarded — Live");
-  const platformOnboardedCounts = counts(onboardedRows,"platform").filter(p => allowedPlatforms.has(p[0]));
-  upsertChart("ch-platform-onboarded", {
-    type:"doughnut",
-    data:{ labels:platformOnboardedCounts.map(p=>p[0]), datasets:[{ data:platformOnboardedCounts.map(p=>p[1]),
-      backgroundColor:["#6366f1","#ec4899","#f59e0b","#06b6d4","#10b981","#8b5cf6","#ef4444","#64748b"] }] },
-    options:{ plugins:{ legend:{position:"bottom", labels:{boxWidth:10}} },
-      onClick: chartClickFilter("prospects","platform","filters-prospects"), onHover: cursorHover() },
-  });
+  const platformOnboardedCounts = counts(onboardedRows,"platform");
+  const tbody_co = document.getElementById("tbl-channel-onboarded-body");
+  const tfoot_co = document.getElementById("tbl-channel-onboarded-foot");
+  if (tbody_co){
+    const grandTotal = platformOnboardedCounts.reduce((s,p)=>s+p[1],0);
+    tbody_co.innerHTML = platformOnboardedCounts.map(([plat,n]) => `
+      <tr class="hover:bg-zinc-50">
+        <td class="px-3 py-2">${escapeHtml(plat)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-medium">${n}</td>
+      </tr>`).join("");
+    if (tfoot_co) tfoot_co.innerHTML = `<tr class="border-t-2 border-zinc-300">
+      <td class="px-3 py-2">Grand Total</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold">${grandTotal}</td>
+    </tr>`;
+  }
   // destinations
   const DEST_EXCLUDE = new Set(["Others","Rest of World","Rest of the World"]);
   const destCounts = counts(rows,"destination").filter(d => !DEST_EXCLUDE.has(d[0])).slice(0,12);
@@ -875,25 +933,139 @@ function renderProspectCharts(rows){
     });
   };
   renderSourceOnboardChart();
-  // MoM
-  const monthSeries = monthCounts.map(([m,total]) => ({ month:m, total, onb: rows.filter(r=>r.month===m && r.status==="Onboarded — Live").length }));
-  const momLabels=[], momReach=[], momOnb=[];
-  for (let i=1;i<monthSeries.length;i++){
-    const p=monthSeries[i-1], c=monthSeries[i];
-    momLabels.push(c.month);
-    momReach.push(p.total ? +(((c.total-p.total)/p.total)*100).toFixed(1) : 0);
-    momOnb.push(p.onb ? +(((c.onb-p.onb)/p.onb)*100).toFixed(1) : (c.onb?100:0));
-  }
+  // MoM — grouped bar: this month vs last month, side by side per metric
+  const allMonthsSorted = [...new Set(rows.map(r=>r.month).filter(Boolean))].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
+  const lastTwo = allMonthsSorted.slice(-2);
+  const momMetrics = ["Outreach","Onboarded","WIP","Follow-ups","Lost"];
+  const momColors  = ["#6366f1","#16a34a","#34d399","#a78bfa","#dc2626"];
+  const getMomCount = (month, metric) => {
+    if (!month) return 0;
+    const sub = rows.filter(r=>r.month===month);
+    if (metric==="Outreach")   return sub.length;
+    if (metric==="Onboarded")  return sub.filter(r=>r.status==="Onboarded — Live").length;
+    if (metric==="WIP")        return sub.filter(r=>r.status==="Onboarding WIP").length;
+    if (metric==="Follow-ups") return sub.filter(r=>r.status.startsWith("Follow up")||r.status==="Replied"||r.status==="In talks").length;
+    if (metric==="Lost")       return sub.filter(r=>r.status==="Lost").length;
+    return 0;
+  };
   upsertChart("ch-mom", {
     type:"bar",
-    data:{ labels:momLabels, datasets:[
-      { label:"Outreach %Δ", data:momReach, backgroundColor:momReach.map(v=>v>=0?"#6366f1":"#f43f5e"), borderRadius:4 },
-      { label:"Onboards %Δ", data:momOnb,  backgroundColor:momOnb.map(v=>v>=0?"#16a34a":"#dc2626"), borderRadius:4 },
-    ]},
-    options:{ plugins:{ legend:{position:"bottom"},
-      tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y>=0?"+":""}${ctx.parsed.y}%` } } },
-      scales:{ y:{ ticks:{ callback: v => v+"%" } } } },
+    data:{ labels: momMetrics, datasets: lastTwo.map((m,i) => ({
+      label: m,
+      data: momMetrics.map(met => getMomCount(m, met)),
+      backgroundColor: i===0 ? "#c7d2fe" : "#6366f1",
+      borderRadius: 4,
+    }))},
+    options:{ plugins:{ legend:{position:"bottom"} },
+      scales:{ x:{ grouped:true }, y:{ beginAtZero:true } } },
   });
+
+  // Weekly progress — role-aware, complete-row rule
+  const ROLES = {
+    "Ishika":"Intern","Aashray":"Intern","Aarya":"Intern","Shravasti":"Intern",
+    "Akksheda":"Intern","Divyanshu":"Intern","Ishita":"Intern","Pratiksha":"Intern",
+    "Pooja":"Intern","Shravani":"Intern","Devansh":"Intern","Anisha":"Intern","Janhavi":"Intern",
+    "Deeksha":"Full-time","Abhishek":"Full-time","Kaamil":"Full-time",
+    "Royce":"Assoc. Manager","Palash":"Manager",
+  };
+  const REQUIRED_FIELDS = ["poc","month","reachDate","region","source","destination","partner","channel","subscribers","platform","status"];
+  const isCompleteRow = r => REQUIRED_FIELDS.every(f => {
+    const v = r[f];
+    if (v == null || v === "" || v === "—") return false;
+    if (f === "subscribers" && v === 0) return false;
+    return true;
+  });
+  const renderWeeklyChart = () => {
+    const warning = document.getElementById("weekly-chart-warning");
+    const subtitle = document.getElementById("weekly-chart-subtitle");
+    const tbody    = document.getElementById("weekly-progress-tbody");
+    const tfoot    = document.getElementById("weekly-progress-tfoot");
+    if (!tbody) return;
+
+    // Determine which month to use
+    const selectedMonths = [...state.filters.prospects.month];
+    const allMonthsSorted2 = [...new Set(rows.map(r=>r.month).filter(Boolean))].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
+    const now = new Date();
+    const currentMonthLabel = now.toLocaleString("en-US",{month:"long",year:"numeric"});
+    let targetMonth;
+    if (selectedMonths.length === 0){
+      targetMonth = allMonthsSorted2.includes(currentMonthLabel)
+        ? currentMonthLabel : allMonthsSorted2[allMonthsSorted2.length-1];
+    } else if (selectedMonths.length === 1){
+      targetMonth = selectedMonths[0];
+    } else {
+      if (warning) warning.classList.remove("hidden");
+      if (subtitle) subtitle.classList.add("hidden");
+      tbody.innerHTML = "";
+      if (tfoot) tfoot.innerHTML = "";
+      return;
+    }
+    if (warning) warning.classList.add("hidden");
+    if (subtitle){ subtitle.classList.remove("hidden"); subtitle.textContent = `${targetMonth} · week-by-week reach-outs + onboards`; }
+
+    const monthParts = targetMonth.match(/^([A-Za-z]+)\s+(\d{4})$/);
+    if (!monthParts){ tbody.innerHTML=""; return; }
+    const MONTHS_LIST = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const monthIdx = MONTHS_LIST.indexOf(monthParts[1]);
+    const year = parseInt(monthParts[2]);
+    if (monthIdx === -1){ tbody.innerHTML=""; return; }
+    const lastDay = new Date(year, monthIdx+1, 0).getDate();
+    const weekBounds = [
+      { label:"Week 1", d1:1,  d2:7 },
+      { label:"Week 2", d1:8,  d2:15 },
+      { label:"Week 3", d1:16, d2:23 },
+      { label:"Week 4", d1:24, d2:lastDay },
+    ].map(w => ({ ...w,
+      start: new Date(year,monthIdx,w.d1,0,0,0,0),
+      end:   new Date(year,monthIdx,w.d2,23,59,59,999),
+    }));
+
+    const ROLES = {
+      "Ishika":"Intern","Aashray":"Intern","Aarya":"Intern","Shravasti":"Intern",
+      "Akksheda":"Intern","Divyanshu":"Intern","Ishita":"Intern","Pratiksha":"Intern",
+      "Pooja":"Intern","Shravani":"Intern","Devansh":"Intern","Anisha":"Intern","Janhavi":"Intern",
+      "Deeksha":"Full-time","Abhishek":"Full-time","Kaamil":"Full-time",
+      "Royce":"Assoc. Manager","Palash":"Manager",
+    };
+    const pocNames = [...new Set(rows.map(r=>r.poc).filter(p=>p&&p!=="—"&&ROLES[p]!=="Manager"))].sort();
+    const monthRows = rows.filter(r=>r.month===targetMonth);
+    const ROLE_ORDER = {"Assoc. Manager":0,"Full-time":1,"Intern":2};
+    pocNames.sort((a,b)=> (ROLE_ORDER[ROLES[a]]??9)-(ROLE_ORDER[ROLES[b]]??9) || a.localeCompare(b));
+
+    const totals = [0,0,0,0,0,0]; // w1,w2,w3,w4,total,onb
+    tbody.innerHTML = pocNames.map(poc => {
+      const wCounts = weekBounds.map(w =>
+        rows.filter(r =>
+          r.poc===poc &&
+          r.reachDate instanceof Date && !isNaN(r.reachDate) &&
+          r.reachDate >= w.start && r.reachDate <= w.end
+        ).length
+      );
+      const total = wCounts.reduce((s,n)=>s+n,0);
+      const onb = monthRows.filter(r=>r.poc===poc&&r.status==="Onboarded — Live").length;
+      wCounts.forEach((n,i)=>totals[i]+=n);
+      totals[4]+=total; totals[5]+=onb;
+      const role = ROLES[poc]||"—";
+      const roleColor = role==="Intern"?"text-indigo-600":role==="Full-time"?"text-fuchsia-600":role==="Assoc. Manager"?"text-amber-600":"text-zinc-500";
+      const cell = n => `<td class="px-3 py-2 text-right tabular-nums ${n===0?"text-zinc-300":""}">${n}</td>`;
+      return `<tr class="hover:bg-zinc-50">
+        <td class="px-3 py-2 font-medium">${escapeHtml(poc)}</td>
+        ${wCounts.map(cell).join("")}
+        <td class="px-3 py-2 text-right tabular-nums font-semibold">${total}</td>
+        <td class="px-3 py-2 text-right tabular-nums text-emerald-700 font-medium">${onb||"—"}</td>
+      </tr>`;
+    }).join("");
+
+    if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
+      <td class="px-3 py-2 font-semibold">Team total</td>
+      ${[0,1,2,3].map(i=>`<td class="px-3 py-2 text-right tabular-nums font-semibold">${totals[i]}</td>`).join("")}
+      <td class="px-3 py-2 text-right tabular-nums font-bold">${totals[4]}</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">${totals[5]||"—"}</td>
+    </tr>`;
+  };
+  renderWeeklyChart();
+  state._weeklyRows = rows;
+  state._renderWeekly = renderWeeklyChart;
   // conv by POC — every POC, no min threshold; horizontal so all names visible
   const convList = pocList.filter(p=>p.total>0).map(p=>({ poc:p.poc, rate:(p.onb/p.total)*100, total:p.total, onb:p.onb }))
     .sort((a,b)=>b.rate-a.rate);
