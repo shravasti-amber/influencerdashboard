@@ -28,6 +28,29 @@
   .tab-btn:not(.active) { color: #71717a; }
   .tab-btn:not(.active):hover { color: #111; background: #f4f4f5; }
   .funnel-bar { height: 28px; border-radius: 4px; transition: width .25s; }
+  .poc-th-clickable { cursor: pointer; user-select: none; transition: background .15s, color .15s; }
+  .poc-th-clickable:hover { background: #e0e7ff; color: #3730a3; }
+  .poc-th-expanded { background: #6366f1 !important; color: white !important; }
+  .poc-td-expanded { background: #f0f4ff; }
+  .poc-td-expanded-total { background: #e0e7ff; font-weight: 600; }
+  /* Zebra striping for all data tables */
+  #poc-breakdown-tbody tr:nth-child(even) { background-color: #f8f8fa; }
+  #poc-breakdown-tbody tr:nth-child(even) td.sticky { background-color: #f8f8fa !important; }
+  #poc-breakdown-tbody tr:hover { background-color: #eef2ff !important; }
+  #poc-breakdown-tbody tr:hover td.sticky { background-color: #eef2ff !important; }
+  #source-onboard-tbody tr:nth-child(even) { background-color: #f8f8fa; }
+  #source-onboard-tbody tr:hover { background-color: #eef2ff !important; }
+  #tbl-channel-onboarded-body tr:nth-child(even) { background-color: #f8f8fa; }
+  #tbl-channel-onboarded-body tr:hover { background-color: #eef2ff !important; }
+  /* VP tab zebra */
+  #vp-table1-tbody tr:nth-child(even) { background-color: #f8f8fa; }
+  #vp-table1-tbody tr:hover { background-color: #eef2ff !important; }
+  #vp-table2-tbody tr:nth-child(even) { background-color: #f8f8fa; }
+  #vp-table2-tbody tr:hover { background-color: #eef2ff !important; }
+  #vp-ch-onb-tbody tr:nth-child(even) { background-color: #f8f8fa; }
+  #vp-ch-onb-tbody tr:hover { background-color: #eef2ff !important; }
+  #vp-table4-tbody tr:nth-child(even) { background-color: #f8f8fa; }
+  #vp-table4-tbody tr:hover { background-color: #eef2ff !important; }
 </style>
 </head>
 <body class="bg-zinc-50 text-zinc-900">
@@ -71,6 +94,7 @@
   <!-- TABS -->
   <div id="tab-bar" class="hidden border-b border-zinc-200 flex gap-1">
     <button class="tab-btn active" data-tab="prospects">Prospects <span class="ml-1 text-[10px] bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded-full" data-count="prospects">0</span></button>
+    <button class="tab-btn" data-tab="vp">Influencer Weekly Metrics</button>
     <button class="tab-btn" data-tab="videos">Growth Tracker <span class="ml-1 text-[10px] bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded-full" data-count="videos">0</span></button>
   </div>
 
@@ -94,16 +118,27 @@
       <div class="lg:col-span-12 -mb-2 pt-1"><h2 class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Pipeline Health</h2></div>
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Pipeline funnel</h3><span class="text-xs text-zinc-500">prospects by stage</span></div><div class="h-[260px]"><canvas id="ch-funnel"></canvas></div></div>
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Outreach over time</h3><span class="text-xs text-zinc-500">by month</span></div><div class="h-[260px]"><canvas id="ch-month"></canvas></div></div>
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Performance by POC</h3><span class="text-xs text-zinc-500">click a bar to drill in</span></div><div class="h-[520px]"><canvas id="ch-poc"></canvas></div></div>
 
       <!-- Section 2 — Channel & Geography Mix -->
       <div class="lg:col-span-12 -mb-2 pt-3"><h2 class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Channel & Geography Mix</h2></div>
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Platform mix</h3><span class="text-xs text-zinc-500">share of outreach</span></div><div class="h-[340px]"><canvas id="ch-platform"></canvas></div></div>
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6">
-        <div class="flex items-center justify-between mb-3"><h3 class="font-semibold text-sm">Channel-wise Onboarded</h3><span class="text-xs text-zinc-500">onboarded partners by platform</span></div>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-sm">Channel-wise Onboarded</h3>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-zinc-500" id="channel-onboarded-subtitle">onboarded partners by platform</span>
+            <div class="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
+              <button id="ch-onb-toggle-count" class="px-2.5 py-1 bg-indigo-600 text-white font-medium" onclick="setChannelOnbView('count')">Count</button>
+              <button id="ch-onb-toggle-mom" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setChannelOnbView('mom')">MoM %</button>
+            </div>
+          </div>
+        </div>
         <table class="w-full text-sm" id="tbl-channel-onboarded">
           <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]">
-            <tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">Onboarded</th></tr>
+            <tr id="tbl-channel-onboarded-head">
+              <th class="px-3 py-2 text-left">Platform</th>
+              <th class="px-3 py-2 text-right">Onboarded</th>
+            </tr>
           </thead>
           <tbody id="tbl-channel-onboarded-body" class="divide-y divide-zinc-100"></tbody>
           <tfoot id="tbl-channel-onboarded-foot" class="bg-zinc-50 font-semibold text-sm"></tfoot>
@@ -114,37 +149,55 @@
 
       <!-- Section 3 — Deep Dive Analytics -->
       <div class="lg:col-span-12 -mb-2 pt-3"><h2 class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Deep Dive Analytics</h2></div>
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-8"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Source → onboarded</h3><div class="flex gap-2"><button id="toggle-source-view" class="text-xs px-3 py-1 rounded border border-zinc-300 bg-white hover:bg-zinc-100" data-view="country">By Country</button><button id="toggle-region-view" class="text-xs px-3 py-1 rounded border border-zinc-300 bg-indigo-600 text-white hover:bg-indigo-700" data-view="region">By Region</button></div></div><div class="h-[420px]"><canvas id="ch-source-onboard"></canvas></div></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-8">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-sm">Source → onboarded</h3>
+          <div class="flex gap-2">
+            <button id="toggle-source-view" class="text-xs px-3 py-1 rounded border border-zinc-300 bg-white hover:bg-zinc-100" data-view="country">By Country</button>
+            <button id="toggle-region-view" class="text-xs px-3 py-1 rounded border border-zinc-300 bg-indigo-600 text-white hover:bg-indigo-700" data-view="region">By Region</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="source-onboard-thead">
+              <tr>
+                <th class="px-3 py-2 text-left">Source</th>
+                <th class="px-3 py-2 text-right">Onboarded</th>
+                <th class="px-3 py-2 text-right">WIP</th>
+                <th class="px-3 py-2 text-right">In Pipeline</th>
+                <th class="px-3 py-2 text-right">Lost</th>
+                <th class="px-3 py-2 text-right font-semibold text-zinc-700">Total</th>
+                <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">Conv %</th>
+              </tr>
+            </thead>
+            <tbody id="source-onboard-tbody" class="divide-y divide-zinc-100"></tbody>
+            <tfoot id="source-onboard-tfoot" class="bg-zinc-50 font-semibold text-xs"></tfoot>
+          </table>
+        </div>
+      </div>
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-4"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Month-over-month</h3><span class="text-xs text-zinc-500">this month vs last month</span></div><div class="h-[420px]"><canvas id="ch-mom"></canvas></div></div>
       <!-- Weekly progress table — placed below conv/lost charts, full width -->
 
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Conversion rate by POC</h3><span class="text-xs text-zinc-500">all POCs</span></div><div class="h-[340px]"><canvas id="ch-conv"></canvas></div></div>
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Why we lose deals</h3><span class="text-xs text-zinc-500">lost reasons</span></div><div class="h-[340px]"><canvas id="ch-lost"></canvas></div></div>
 
-      <!-- Weekly progress table -->
+      <!-- POC Status Breakdown Table -->
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
         <div class="flex items-center justify-between mb-3">
           <div>
-            <h3 class="font-semibold text-sm">Weekly progress by POC</h3>
-            <p class="text-xs text-zinc-500 mt-0.5" id="weekly-chart-subtitle">week-by-week reach-outs · onboards for selected month</p>
+            <h3 class="font-semibold text-sm">POC Status Breakdown</h3>
+            <p class="text-xs text-zinc-500 mt-0.5">reach-out status by POC</p>
           </div>
-          <span id="weekly-chart-warning" class="hidden text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-3 py-1.5">Select a single month to see weekly breakdown</span>
+          <div class="flex items-center gap-2 flex-wrap justify-end">
+            <span id="poc-breakdown-warning" class="hidden text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-3 py-1.5">Select a single month for weekly view</span>
+            <div id="poc-week-toggles" class="flex flex-wrap gap-1.5"></div>
+          </div>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full text-xs" id="weekly-progress-table">
-            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]">
-              <tr>
-                <th class="px-3 py-2 text-left">POC</th>
-                <th class="px-3 py-2 text-right">Week 1<br><span class="normal-case font-normal text-zinc-400">1–7</span></th>
-                <th class="px-3 py-2 text-right">Week 2<br><span class="normal-case font-normal text-zinc-400">8–15</span></th>
-                <th class="px-3 py-2 text-right">Week 3<br><span class="normal-case font-normal text-zinc-400">16–23</span></th>
-                <th class="px-3 py-2 text-right">Week 4<br><span class="normal-case font-normal text-zinc-400">24–end</span></th>
-                <th class="px-3 py-2 text-right font-semibold text-zinc-700">Total Reachouts</th>
-                <th class="px-3 py-2 text-right text-emerald-700">Onboarded</th>
-              </tr>
-            </thead>
-            <tbody id="weekly-progress-tbody" class="divide-y divide-zinc-100"></tbody>
-            <tfoot id="weekly-progress-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
+          <table class="w-full text-xs" id="poc-breakdown-table">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="poc-breakdown-thead"></thead>
+            <tbody id="poc-breakdown-tbody" class="divide-y divide-zinc-100"></tbody>
+            <tfoot id="poc-breakdown-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
           </table>
         </div>
       </div>
@@ -251,6 +304,110 @@
     </section>
 
     </section>
+  </div>
+
+  <!-- ====================== VP WEEKLY MEETING METRICS TAB ====================== -->
+  <div data-tab-content="vp" class="hidden space-y-6">
+
+    <div id="vp-empty" class="bg-white rounded-xl border border-zinc-200 p-8 text-center text-zinc-400 text-sm">
+      Upload the prospects workbook to populate this tab.
+    </div>
+
+    <div id="vp-content" class="hidden space-y-6">
+
+      <!-- Filters -->
+      <section class="bg-white rounded-xl border border-zinc-200 p-4">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3" id="filters-vp"></div>
+        <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
+          <div id="active-chips-vp" class="flex flex-wrap gap-1.5"></div>
+          <div class="flex items-center gap-2">
+            <button data-reset-vp class="text-xs px-2.5 py-1.5 rounded-md border border-zinc-300 hover:bg-zinc-100">Reset filters</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- KPI Cards -->
+      <section id="kpi-row-vp" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3"></section>
+
+      <!-- Table 1: Reachout Status for Domestic Influencers -->
+      <div class="bg-white rounded-xl border border-zinc-200 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="font-semibold text-sm">Reachout Status for Domestic Influencers</h3>
+            <p class="text-xs text-zinc-500 mt-0.5" id="vp-t1-subtitle">UK-Dom · US-Dom · Australia — last 3 months</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs" id="vp-table1">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="vp-table1-thead"></thead>
+            <tbody id="vp-table1-tbody" class="divide-y divide-zinc-100"></tbody>
+            <tfoot id="vp-table1-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Table 2: Source Country × Reachout Status -->
+      <div class="bg-white rounded-xl border border-zinc-200 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="font-semibold text-sm">Source Country × Reachout Status</h3>
+            <p class="text-xs text-zinc-500 mt-0.5">May 2026 &amp; June 2026 · onboarding rate &amp; response rate</p>
+          </div>
+          <div class="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
+            <button id="vp-t2-sort-alpha" class="px-2.5 py-1 bg-indigo-600 text-white font-medium" onclick="setVpT2Sort('alpha')">A → Z</button>
+            <button id="vp-t2-sort-onb" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setVpT2Sort('onb')">High Onboarding</button>
+            <button id="vp-t2-sort-resp" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setVpT2Sort('resp')">High Response</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs" id="vp-table2">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="vp-table2-thead"></thead>
+            <tbody id="vp-table2-tbody" class="divide-y divide-zinc-100"></tbody>
+            <tfoot id="vp-table2-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Table 3: Channel-wise Onboarded (mirrored from Prospects tab) -->
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 max-w-lg">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-sm">Channel-wise Onboarded</h3>
+          <div class="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
+            <button id="vp-ch-onb-count" class="px-2.5 py-1 bg-indigo-600 text-white font-medium" onclick="setVpChannelView('count')">Count</button>
+            <button id="vp-ch-onb-mom" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setVpChannelView('mom')">MoM %</button>
+          </div>
+        </div>
+        <table class="w-full text-xs">
+          <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="vp-ch-onb-thead">
+            <tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">Onboarded</th></tr>
+          </thead>
+          <tbody id="vp-ch-onb-tbody" class="divide-y divide-zinc-100"></tbody>
+          <tfoot id="vp-ch-onb-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
+        </table>
+      </div>
+
+      <!-- Table 4: Source Country MoM Onboarded Growth -->
+      <div class="bg-white rounded-xl border border-zinc-200 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="font-semibold text-sm">Source Country — Onboarded MoM Growth</h3>
+            <p class="text-xs text-zinc-500 mt-0.5" id="vp-t4-subtitle">April · May · June 2026 — % change only · onboarded live + WIP</p>
+          </div>
+          <div class="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
+            <button id="vp-sort-alpha" class="px-2.5 py-1 bg-indigo-600 text-white font-medium" onclick="setVpSort('alpha')">A → Z</button>
+            <button id="vp-sort-desc" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setVpSort('desc')">High → Low</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs" id="vp-table4">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="vp-table4-thead"></thead>
+            <tbody id="vp-table4-tbody" class="divide-y divide-zinc-100"></tbody>
+            <tfoot id="vp-table4-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
+          </table>
+        </div>
+      </div>
+
+    </div>
   </div>
 
 </main>
@@ -404,9 +561,14 @@ const state = {
   pageSize: 50,
   charts: {},
   sourceView: "region", // "country" or "region"
+  channelOnbView: "count", // "count" or "mom"
+  vpChannelView: "count", // "count" or "mom"
+  vpSort: "alpha", // "alpha", "desc"
+  vpT2Sort: "alpha", // "alpha", "onb", "resp"
   filters: {
     prospects: { poc:new Set(), month:new Set(), platform:new Set(), destination:new Set(), source:new Set(), status:new Set(), search:"" },
     videos:    { poc:new Set(), month:new Set(), channel:new Set(), destination:new Set(), source:new Set(), paidAff:new Set(), quality:new Set(), search:"" },
+    vp:        { month:new Set(), destination:new Set(), source:new Set() },
   },
 };
 
@@ -551,6 +713,7 @@ function ingestXlsx(buf){
   const wb = XLSX.read(buf, { type: "array", cellDates: true });
   const prospects = [];
   let targetsSheet = null;
+  let snehalSheet  = null;
   for (const name of wb.SheetNames){
     const ws = wb.Sheets[name];
     const data = XLSX.utils.sheet_to_json(ws, { defval: "", raw: true });
@@ -559,6 +722,8 @@ function ingestXlsx(buf){
     const t = sheetType(headers);
     if (t === "prospects" && name.toLowerCase().includes("master prospect")) prospects.push(...data.map(normalizeProspect).filter(Boolean));
     else if (t === "targets") targetsSheet = data;
+    // POC Summary - Snehal sheet (VP tab pivot)
+    if (name.toLowerCase().includes("snehal") || name.toLowerCase().includes("poc summary")) snehalSheet = data;
   }
   // Fallback: if no Master prospect detected, take the largest prospects-typed sheet
   if (!prospects.length){
@@ -574,6 +739,7 @@ function ingestXlsx(buf){
   }
   state.datasets.prospects = prospects;
   state.datasets.targets = parseTargets(targetsSheet);
+  state.datasets.snehal  = snehalSheet;
   onLoad();
 }
 
@@ -609,6 +775,9 @@ function onLoad(){
   // Default to whichever has data
   if (!p && v) state.tab = "videos";
   switchTab(state.tab);
+  // Always render VP tab from prospects data
+  buildVpFilters();
+  renderVpTab();
 }
 
 // ============================================================
@@ -620,6 +789,7 @@ function switchTab(name){
   document.querySelectorAll("[data-tab-content]").forEach(el => el.classList.toggle("hidden", el.dataset.tabContent !== name));
   if (name === "prospects") { buildProspectFilters(); applyProspectFilters(); }
   if (name === "videos")    { buildVideoFilters();    applyVideoFilters(); }
+  if (name === "vp")        { buildVpFilters(); applyVpFilters(); }
 }
 document.querySelectorAll(".tab-btn").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
 
@@ -779,6 +949,7 @@ function applyProspectFilters(){
   renderActiveChips("prospects", "active-chips-prospects", rows.length);
   renderProspectKPIs(rows);
   renderProspectCharts(rows);
+  renderPocBreakdownTable(rows);
   state.page.prospects = 0;
   renderProspectTable(rows);
 }
@@ -819,9 +990,9 @@ function renderProspectKPIs(rows){
   const uniq = new Set(rows.map(r => (r.partner||"").toLowerCase()).filter(Boolean)).size;
   const kpis = [
     { label:"Total prospects", value: total.toLocaleString(), sub:`${uniq.toLocaleString()} unique influencers` },
-    { label:"Onboarded · Live", value: onb.toLocaleString(), sub:`+ ${wip} in progress`, color:"text-emerald-600" },
+    { label:"Onboarded · Live", value: onb.toLocaleString(), sub:`confirmed onboards`, color:"text-emerald-600" },
+    { label:"Onboarding WIP", value: wip.toLocaleString(), sub:`in progress`, color:"text-teal-600" },
     { label:"Conversion rate", value: conv.toFixed(1)+"%", sub:"(onboarded + WIP) / total" },
-    { label:"Active follow-ups", value: fu.toLocaleString(), sub:"FU 1/2/3" },
     { label:"Lost", value: lost.toLocaleString(), sub: total ? ((lost/total)*100).toFixed(1)+"%" : "", color:"text-rose-600" },
     { label:"POCs active", value: new Set(rows.map(r=>r.poc)).size, sub:"team members" },
   ];
@@ -831,6 +1002,100 @@ function renderProspectKPIs(rows){
       <div class="text-2xl font-bold mt-1 ${k.color||""}">${k.value}</div>
       <div class="text-xs text-zinc-500 mt-1">${k.sub||""}</div>
     </div>`).join("");
+}
+
+function setChannelOnbView(mode){
+  state.channelOnbView = mode;
+  document.getElementById("ch-onb-toggle-count").className = mode==="count"
+    ? "px-2.5 py-1 bg-indigo-600 text-white font-medium"
+    : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
+  document.getElementById("ch-onb-toggle-mom").className = mode==="mom"
+    ? "px-2.5 py-1 bg-indigo-600 text-white font-medium"
+    : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
+  if (state._channelOnbRows) renderChannelOnboardedTable(state._channelOnbRows);
+}
+
+function renderChannelOnboardedTable(rows){
+  const tbody_co = document.getElementById("tbl-channel-onboarded-body");
+  const tfoot_co = document.getElementById("tbl-channel-onboarded-foot");
+  const head_co  = document.getElementById("tbl-channel-onboarded-head");
+  if (!tbody_co) return;
+
+  // Onboarded = Live + WIP
+  const onboardedRows = rows.filter(r => r.status === "Onboarded — Live" || r.status === "Onboarding WIP");
+  const platformCurrent = counts(onboardedRows,"platform");
+
+  if (state.channelOnbView === "count"){
+    if (head_co) head_co.innerHTML = `<th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">Onboarded</th>`;
+    const grandTotal = platformCurrent.reduce((s,p)=>s+p[1],0);
+    tbody_co.innerHTML = platformCurrent.map(([plat,n]) => `
+      <tr class="hover:bg-zinc-50">
+        <td class="px-3 py-2">${escapeHtml(plat)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-medium">${n}</td>
+      </tr>`).join("");
+    if (tfoot_co) tfoot_co.innerHTML = `<tr class="border-t-2 border-zinc-300">
+      <td class="px-3 py-2">Grand Total</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold">${grandTotal}</td>
+    </tr>`;
+  } else {
+    // MoM% view — compare current filtered month vs previous month, Live+WIP
+    const allRows = state.datasets.prospects;
+    const allMonthsSorted = [...new Set(allRows.map(r=>r.month).filter(Boolean))].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
+    const selectedMonths = [...state.filters.prospects.month];
+    let curMonth, prevMonth;
+    if (selectedMonths.length === 1){
+      curMonth = selectedMonths[0];
+      const idx = allMonthsSorted.indexOf(curMonth);
+      prevMonth = idx > 0 ? allMonthsSorted[idx-1] : null;
+    } else {
+      const last2 = allMonthsSorted.slice(-2);
+      curMonth = last2[1] || last2[0];
+      prevMonth = last2.length === 2 ? last2[0] : null;
+    }
+    const isOnb = r => r.status === "Onboarded — Live" || r.status === "Onboarding WIP";
+    const curOnb  = allRows.filter(r => r.month === curMonth  && isOnb(r));
+    const prevOnb = prevMonth ? allRows.filter(r => r.month === prevMonth && isOnb(r)) : [];
+    const curCounts  = new Map(counts(curOnb,"platform"));
+    const prevCounts = new Map(counts(prevOnb,"platform"));
+    const allPlats = [...new Set([...curCounts.keys(), ...prevCounts.keys()])].sort();
+
+    if (head_co) head_co.innerHTML = `
+      <th class="px-3 py-2 text-left">Platform</th>
+      <th class="px-3 py-2 text-right">${escapeHtml(prevMonth||"Prev")}</th>
+      <th class="px-3 py-2 text-right">${escapeHtml(curMonth||"Current")}</th>
+      <th class="px-3 py-2 text-right">MoM %</th>`;
+
+    tbody_co.innerHTML = allPlats.map(plat => {
+      const cur = curCounts.get(plat)||0;
+      const prev = prevCounts.get(plat)||0;
+      let momStr = "—", momColor = "";
+      if (prev > 0){
+        const pct = ((cur - prev)/prev)*100;
+        momStr = (pct >= 0 ? "+" : "") + pct.toFixed(1) + "%";
+        momColor = pct > 0 ? "text-emerald-600 font-semibold" : pct < 0 ? "text-rose-600 font-semibold" : "text-zinc-500";
+      } else if (cur > 0){
+        momStr = "New"; momColor = "text-indigo-600 font-semibold";
+      }
+      return `<tr class="hover:bg-zinc-50">
+        <td class="px-3 py-2">${escapeHtml(plat)}</td>
+        <td class="px-3 py-2 text-right tabular-nums text-zinc-400">${prev||"—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-medium">${cur||"—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums ${momColor}">${momStr}</td>
+      </tr>`;
+    }).join("");
+
+    const curTotal  = allPlats.reduce((s,p)=>s+(curCounts.get(p)||0),0);
+    const prevTotal = allPlats.reduce((s,p)=>s+(prevCounts.get(p)||0),0);
+    const totalMom = prevTotal > 0 ? ((curTotal-prevTotal)/prevTotal*100) : null;
+    const totalMomStr = totalMom != null ? (totalMom >= 0 ? "+" : "") + totalMom.toFixed(1) + "%" : "—";
+    const totalMomColor = totalMom != null ? (totalMom > 0 ? "text-emerald-600" : totalMom < 0 ? "text-rose-600" : "") : "";
+    if (tfoot_co) tfoot_co.innerHTML = `<tr class="border-t-2 border-zinc-300">
+      <td class="px-3 py-2">Grand Total</td>
+      <td class="px-3 py-2 text-right tabular-nums text-zinc-400 font-semibold">${prevTotal||"—"}</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold">${curTotal||"—"}</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold ${totalMomColor}">${totalMomStr}</td>
+    </tr>`;
+  }
 }
 
 function renderProspectCharts(rows){
@@ -854,31 +1119,6 @@ function renderProspectCharts(rows){
     options:{ plugins:{ legend:{position:"bottom"} },
       scales:{ y:{position:"left", beginAtZero:true}, y1:{position:"right", beginAtZero:true, grid:{drawOnChartArea:false}} } },
   });
-  // POC stacked
-  const pocList = [...new Set(rows.map(r=>r.poc))].map(p => {
-    const sub = rows.filter(r=>r.poc===p);
-    return {
-      poc:p, total:sub.length,
-      onb: sub.filter(r=>r.status==="Onboarded — Live").length,
-      wip: sub.filter(r=>r.status==="Onboarding WIP").length,
-      fu:  sub.filter(r=>r.status.startsWith("Follow up")||r.status==="Replied"||r.status==="In talks").length,
-      contacted: sub.filter(r=>r.status==="Contacted").length,
-      lost: sub.filter(r=>r.status==="Lost").length,
-    };
-  }).filter(p=>p.total && p.poc !== "—").sort((a,b)=>a.poc.localeCompare(b.poc));
-  upsertChart("ch-poc", {
-    type:"bar",
-    data:{ labels:pocList.map(p=>p.poc), datasets:[
-      { label:"Onboarded", data:pocList.map(p=>p.onb), backgroundColor:"#16a34a" },
-      { label:"Onboarding WIP", data:pocList.map(p=>p.wip), backgroundColor:"#34d399" },
-      { label:"Follow-ups / In talks", data:pocList.map(p=>p.fu), backgroundColor:"#a78bfa" },
-      { label:"Contacted", data:pocList.map(p=>p.contacted), backgroundColor:"#94a3b8" },
-      { label:"Lost", data:pocList.map(p=>p.lost), backgroundColor:"#dc2626" },
-    ]},
-    options:{ indexAxis:"y", plugins:{legend:{position:"bottom"}},
-      scales:{ x:{stacked:true, beginAtZero:true}, y:{stacked:true, ticks:{autoSkip:false}} },
-      onClick: chartClickFilter("prospects","poc","filters-prospects"), onHover: cursorHover() },
-  });
   // platform
   const allowedPlatforms = new Set(["YouTube", "TikTok", "Instagram", "Multi-platform"]);
   const platformCounts = counts(rows,"platform").filter(p => allowedPlatforms.has(p[0]));
@@ -889,23 +1129,9 @@ function renderProspectCharts(rows){
     options:{ plugins:{ legend:{position:"bottom", labels:{boxWidth:10}} },
       onClick: chartClickFilter("prospects","platform","filters-prospects"), onHover: cursorHover() },
   });
-  // platform mix for onboarded
-  const onboardedRows = rows.filter(r => r.status === "Onboarded — Live");
-  const platformOnboardedCounts = counts(onboardedRows,"platform");
-  const tbody_co = document.getElementById("tbl-channel-onboarded-body");
-  const tfoot_co = document.getElementById("tbl-channel-onboarded-foot");
-  if (tbody_co){
-    const grandTotal = platformOnboardedCounts.reduce((s,p)=>s+p[1],0);
-    tbody_co.innerHTML = platformOnboardedCounts.map(([plat,n]) => `
-      <tr class="hover:bg-zinc-50">
-        <td class="px-3 py-2">${escapeHtml(plat)}</td>
-        <td class="px-3 py-2 text-right tabular-nums font-medium">${n}</td>
-      </tr>`).join("");
-    if (tfoot_co) tfoot_co.innerHTML = `<tr class="border-t-2 border-zinc-300">
-      <td class="px-3 py-2">Grand Total</td>
-      <td class="px-3 py-2 text-right tabular-nums font-bold">${grandTotal}</td>
-    </tr>`;
-  }
+  // platform mix for onboarded — with Count / MoM% toggle
+  state._channelOnbRows = rows; // save for re-render on toggle
+  renderChannelOnboardedTable(rows);
   // destinations
   const DEST_EXCLUDE = new Set(["Others","Rest of World","Rest of the World"]);
   const destCounts = counts(rows,"destination").filter(d => !DEST_EXCLUDE.has(d[0])).slice(0,12);
@@ -923,46 +1149,58 @@ function renderProspectCharts(rows){
     options:{ indexAxis:"y", scales:{ x:{beginAtZero:true} },
       onClick: chartClickFilter("prospects","source","filters-prospects"), onHover: cursorHover() },
   });
-  // source -> onboarded stacked (country or region toggle)
+  // source -> onboarded table (country or region toggle)
   const renderSourceOnboardChart = () => {
+    const tbody = document.getElementById("source-onboard-tbody");
+    const tfoot = document.getElementById("source-onboard-tfoot");
+    const thead = document.getElementById("source-onboard-thead");
+    if (!tbody) return;
+
     let sourceAgg;
-    if (state.sourceView === "region") {
-      sourceAgg = [...new Set(rows.map(r=>r.region).filter(r => r && r !== "—"))].map(s => {
-        const sub = rows.filter(r=>r.region===s);
-        return {
-          label:s, total:sub.length,
-          onb: sub.filter(r=>r.status==="Onboarded — Live").length,
-          wip: sub.filter(r=>r.status==="Onboarding WIP").length,
-          pipe: sub.filter(r=>r.status.startsWith("Follow up")||r.status==="Replied"||r.status==="In talks"||r.status==="High ask"||r.status==="Contacted").length,
-          lost: sub.filter(r=>r.status==="Lost").length,
-        };
-      }).filter(s=>s.total).sort((a,b)=>b.onb-a.onb||b.total-a.total).slice(0,15);
-    } else {
-      sourceAgg = [...new Set(rows.map(r=>r.source))].map(s => {
-        const sub = rows.filter(r=>r.source===s);
-        return {
-          label:s, total:sub.length,
-          onb: sub.filter(r=>r.status==="Onboarded — Live").length,
-          wip: sub.filter(r=>r.status==="Onboarding WIP").length,
-          pipe: sub.filter(r=>r.status.startsWith("Follow up")||r.status==="Replied"||r.status==="In talks"||r.status==="High ask"||r.status==="Contacted").length,
-          lost: sub.filter(r=>r.status==="Lost").length,
-        };
-      }).filter(s=>s.total).sort((a,b)=>b.onb-a.onb||b.total-a.total).slice(0,15);
-    }
-    upsertChart("ch-source-onboard", {
-      type:"bar",
-      data:{ labels:sourceAgg.map(s=>s.label), datasets:[
-        { label:"Onboarded", data:sourceAgg.map(s=>s.onb), backgroundColor:"#16a34a" },
-        { label:"Onboarding WIP", data:sourceAgg.map(s=>s.wip), backgroundColor:"#34d399" },
-        { label:"In pipeline", data:sourceAgg.map(s=>s.pipe), backgroundColor:"#a78bfa" },
-        { label:"Lost", data:sourceAgg.map(s=>s.lost), backgroundColor:"#dc2626" },
-      ]},
-      options:{ indexAxis:"y", plugins:{ legend:{position:"bottom"},
-        tooltip:{ callbacks:{ afterLabel: ctx => { const s=sourceAgg[ctx.dataIndex]; return `Conv: ${s.total?((s.onb/s.total)*100).toFixed(1):"0"}% · Total ${s.total}`; } } } },
-        scales:{ x:{stacked:true, beginAtZero:true}, y:{stacked:true} },
-        onClick: chartClickFilter("prospects","source","filters-prospects"), onHover: cursorHover() },
-    });
+    const groupKey = state.sourceView === "region" ? "region" : "source";
+    const keys = [...new Set(rows.map(r=>r[groupKey]).filter(v => v && v !== "—"))];
+    sourceAgg = keys.map(s => {
+      const sub = rows.filter(r=>r[groupKey]===s);
+      return {
+        label:s, total:sub.length,
+        onb:  sub.filter(r=>r.status==="Onboarded — Live").length,
+        wip:  sub.filter(r=>r.status==="Onboarding WIP").length,
+        pipe: sub.filter(r=>r.status.startsWith("Follow up")||r.status==="Replied"||r.status==="In talks"||r.status==="High ask"||r.status==="Contacted").length,
+        lost: sub.filter(r=>r.status==="Lost").length,
+      };
+    }).filter(s=>s.total >= 5).sort((a,b)=>b.onb-a.onb||b.total-a.total).slice(0,20);
+
+    const blank = n => n === 0 ? "" : n;
+    tbody.innerHTML = sourceAgg.map(s => {
+      const conv = s.total ? ((s.onb/s.total)*100).toFixed(1)+"%" : "—";
+      return `<tr class="hover:bg-zinc-50">
+        <td class="px-3 py-2 font-medium">${escapeHtml(s.label)}</td>
+        <td class="px-3 py-2 text-right tabular-nums text-emerald-700 font-medium">${blank(s.onb)}</td>
+        <td class="px-3 py-2 text-right tabular-nums text-teal-600">${blank(s.wip)}</td>
+        <td class="px-3 py-2 text-right tabular-nums text-violet-600">${blank(s.pipe)}</td>
+        <td class="px-3 py-2 text-right tabular-nums text-rose-500">${blank(s.lost)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-semibold">${s.total}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700 font-medium">${conv}</td>
+      </tr>`;
+    }).join("");
+
+    const totOnb  = sourceAgg.reduce((s,r)=>s+r.onb,0);
+    const totWip  = sourceAgg.reduce((s,r)=>s+r.wip,0);
+    const totPipe = sourceAgg.reduce((s,r)=>s+r.pipe,0);
+    const totLost = sourceAgg.reduce((s,r)=>s+r.lost,0);
+    const totAll  = sourceAgg.reduce((s,r)=>s+r.total,0);
+    const totConv = totAll ? ((totOnb/totAll)*100).toFixed(1)+"%" : "—";
+    if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
+      <td class="px-3 py-2 font-bold">Grand Total</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">${totOnb||""}</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold text-teal-600">${totWip||""}</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold text-violet-600">${totPipe||""}</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold text-rose-500">${totLost||""}</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold">${totAll}</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${totConv}</td>
+    </tr>`;
   };
+  state._renderSourceOnboard = renderSourceOnboardChart;
   renderSourceOnboardChart();
   // MoM — grouped bar: this month vs last month, side by side per metric
   const allMonthsSorted = [...new Set(rows.map(r=>r.month).filter(Boolean))].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
@@ -1094,9 +1332,15 @@ function renderProspectCharts(rows){
       <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">${totals[5]||"—"}</td>
     </tr>`;
   };
-  renderWeeklyChart();
-  state._weeklyRows = rows;
-  state._renderWeekly = renderWeeklyChart;
+  // pocList needed for conversion rate chart
+  const pocList = [...new Set(rows.map(r=>r.poc))].map(p => {
+    const sub = rows.filter(r=>r.poc===p);
+    return {
+      poc:p, total:sub.length,
+      onb: sub.filter(r=>r.status==="Onboarded — Live").length,
+      wip: sub.filter(r=>r.status==="Onboarding WIP").length,
+    };
+  }).filter(p=>p.total && p.poc !== "—").sort((a,b)=>a.poc.localeCompare(b.poc));
   // conv by POC — every POC, no min threshold; horizontal so all names visible
   const convList = pocList.filter(p=>p.total>0).map(p=>({ poc:p.poc, rate:(p.onb/p.total)*100, total:p.total, onb:p.onb }))
     .sort((a,b)=>b.rate-a.rate);
@@ -1114,6 +1358,676 @@ function renderProspectCharts(rows){
     data:{ labels:lostCounts.map(l=>l[0]), datasets:[{ data:lostCounts.map(l=>l[1]), backgroundColor:"#f43f5e", borderRadius:4 }] },
     options:{ indexAxis:"y", scales:{ x:{beginAtZero:true} } },
   });
+}
+
+// ============================================================
+// VP WEEKLY MEETING METRICS TAB
+// ============================================================
+
+function getLastThreeMonths(){
+  // Returns ["April 2026","May 2026","June 2026"] style — always last 3 calendar months
+  const now = new Date();
+  const months = [];
+  for (let i = 2; i >= 0; i--){
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(d.toLocaleString("en-US",{month:"long",year:"numeric"}));
+  }
+  return months;
+}
+
+function setVpChannelView(mode){
+  state.vpChannelView = mode;
+  document.getElementById("vp-ch-onb-count").className = mode==="count"
+    ? "px-2.5 py-1 bg-indigo-600 text-white font-medium"
+    : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
+  document.getElementById("vp-ch-onb-mom").className = mode==="mom"
+    ? "px-2.5 py-1 bg-indigo-600 text-white font-medium"
+    : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
+  renderVpTab();
+}
+
+function setVpSort(dir){
+  state.vpSort = dir;
+  const alphaBtn = document.getElementById("vp-sort-alpha");
+  const descBtn  = document.getElementById("vp-sort-desc");
+  if (alphaBtn) alphaBtn.className = dir==="alpha" ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
+  if (descBtn)  descBtn.className  = dir==="desc"  ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
+  renderVpTab();
+}
+
+function setVpT2Sort(mode){
+  state.vpT2Sort = mode;
+  ["alpha","onb","resp"].forEach(m => {
+    const btn = document.getElementById("vp-t2-sort-"+m);
+    if (btn) btn.className = m===mode ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
+  });
+  renderVpTab();
+}
+
+// ── VP Filters ──
+const VP_FILTERS = {
+  month:       { label:"Month", field:"month", set:null, sort:(a,b)=>monthSortKey(a)-monthSortKey(b) },
+  destination: { label:"Destination Country", field:"destination", set:null },
+  source:      { label:"Source Country", field:"source", set:null },
+};
+
+function buildVpFilters(){
+  for (const k of Object.keys(VP_FILTERS)) VP_FILTERS[k].set = state.filters.vp[k];
+  const JAN_2026 = new Date(2026,0,1).getTime();
+  const rows2026 = state.datasets.prospects.filter(r => monthSortKey(r.month) >= JAN_2026);
+  buildFilters("filters-vp", rows2026, VP_FILTERS, applyVpFilters);
+}
+
+function applyVpFilters(){
+  renderActiveChipsVp(state.datasets.prospects.length);
+  renderVpTab();
+}
+
+function renderActiveChipsVp(totalRows){
+  const host = document.getElementById("active-chips-vp");
+  if (!host) return;
+  const filters = state.filters.vp;
+  const chips = [];
+  for (const [k, set] of Object.entries(filters)) if (set instanceof Set) for (const v of set) chips.push({k,v});
+  host.innerHTML = chips.length
+    ? chips.map(c => `<span class="chip bg-indigo-50 text-indigo-700 border border-indigo-100">${escapeHtml(c.k)}: ${escapeHtml(c.v)} <span class="chip-x" data-rm-vp-k="${escapeAttr(c.k)}" data-rm-vp-v="${escapeAttr(c.v)}">×</span></span>`).join("")
+    : `<span class="text-xs text-zinc-400">No filters active · ${totalRows.toLocaleString()} rows</span>`;
+  host.querySelectorAll("[data-rm-vp-k]").forEach(el => {
+    el.addEventListener("click", () => {
+      state.filters.vp[el.dataset.rmVpK].delete(el.dataset.rmVpV);
+      const filterHost = document.getElementById("filters-vp");
+      const cb = filterHost.querySelector(`input[data-filter="${el.dataset.rmVpK}"][value="${CSS.escape(el.dataset.rmVpV)}"]`);
+      if (cb) cb.checked = false;
+      updateBtnLabel(filterHost, el.dataset.rmVpK, state.filters.vp[el.dataset.rmVpK]);
+      applyVpFilters();
+    });
+  });
+}
+
+// Reset vp filters
+document.addEventListener("DOMContentLoaded", () => {
+  const resetBtn = document.querySelector("[data-reset-vp]");
+  if (resetBtn) resetBtn.addEventListener("click", () => {
+    for (const k of Object.keys(state.filters.vp)) if (state.filters.vp[k] instanceof Set) state.filters.vp[k].clear();
+    const host = document.getElementById("filters-vp");
+    if (host){
+      host.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+      host.querySelectorAll("[data-toggle]").forEach(b => b.textContent = "All");
+    }
+    applyVpFilters();
+  });
+});
+
+function renderVpTab(){
+  const allRows = state.datasets.prospects;
+  if (!allRows || !allRows.length){
+    document.getElementById("vp-empty").classList.remove("hidden");
+    document.getElementById("vp-content").classList.add("hidden");
+    return;
+  }
+  document.getElementById("vp-empty").classList.add("hidden");
+  document.getElementById("vp-content").classList.remove("hidden");
+
+  // Apply VP filters
+  const vf = state.filters.vp;
+  const rows = allRows.filter(r => {
+    if (vf.month.size && !vf.month.has(r.month)) return false;
+    if (vf.destination.size && !vf.destination.has(r.destination)) return false;
+    if (vf.source.size && !vf.source.has(r.source)) return false;
+    return true;
+  });
+
+  const last3 = getLastThreeMonths(); // ["April 2026","May 2026","June 2026"]
+  const blank = n => (!n || n===0) ? "" : n;
+  const pct = (n,d) => d > 0 ? ((n/d)*100).toFixed(1)+"%" : "—";
+  const mom  = (cur,prev) => prev > 0 ? ((cur-prev)/prev*100).toFixed(1)+"%" : (cur > 0 ? "New" : "—");
+  const momColor = str => {
+    if (!str || str==="—" || str==="New") return str==="New" ? "text-indigo-600 font-semibold" : "";
+    return parseFloat(str) > 0 ? "text-emerald-600 font-semibold" : parseFloat(str) < 0 ? "text-rose-600 font-semibold" : "";
+  };
+  const isOnb = r => r.status === "Onboarded — Live" || r.status === "Onboarding WIP";
+
+  // ── KPI CARDS ──
+  const totalProspects = rows.length;
+  const onboarded = rows.filter(r => r.status === "Onboarded — Live" || r.status === "Onboarding WIP").length;
+  const convRate = totalProspects > 0 ? ((onboarded/totalProspects)*100).toFixed(1)+"%" : "—";
+  const activePOCs = new Set(rows.filter(r=>r.poc&&r.poc!=="—").map(r=>r.poc)).size;
+
+  // Top source by onboarding
+  const srcOnbMap = new Map();
+  rows.filter(r=>isOnb(r)&&r.source&&r.source!=="—").forEach(r=>{
+    srcOnbMap.set(r.source, (srcOnbMap.get(r.source)||0)+1);
+  });
+  const topSrc = [...srcOnbMap.entries()].sort((a,b)=>b[1]-a[1]);
+  const topSrcLabel = topSrc.length ? topSrc[0][0] : "—";
+  const topSrcCount = topSrc.length ? topSrc[0][1] : 0;
+
+  // Top destination by onboarding
+  const destOnbMap = new Map();
+  rows.filter(r=>isOnb(r)&&r.destination&&r.destination!=="—").forEach(r=>{
+    destOnbMap.set(r.destination, (destOnbMap.get(r.destination)||0)+1);
+  });
+  const topDest = [...destOnbMap.entries()].sort((a,b)=>b[1]-a[1]);
+  const topDestLabel = topDest.length ? topDest[0][0] : "—";
+  const topDestCount = topDest.length ? topDest[0][1] : 0;
+
+  const kpis = [
+    { label:"Total Prospects", value: totalProspects.toLocaleString(), sub:"in pipeline" },
+    { label:"Onboarded", value: onboarded.toLocaleString(), sub:"Live + WIP", color:"text-emerald-600" },
+    { label:"Conversion Rate", value: convRate, sub:"onboarded / total", color:"text-indigo-600" },
+    { label:"Active POCs", value: activePOCs.toLocaleString(), sub:"team members" },
+    { label:"Top Source Country", value: topSrcLabel, sub:`${topSrcCount} onboarded`, color:"text-fuchsia-600" },
+    { label:"Top Destination Country", value: topDestLabel, sub:`${topDestCount} onboarded`, color:"text-amber-600" },
+  ];
+  const kpiHost = document.getElementById("kpi-row-vp");
+  if (kpiHost) kpiHost.innerHTML = kpis.map(x=>`
+    <div class="bg-white rounded-xl border border-zinc-200 p-4">
+      <div class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">${x.label}</div>
+      <div class="text-xl font-bold mt-1 ${x.color||""} break-words leading-tight">${x.value}</div>
+      <div class="text-xs text-zinc-500 mt-1">${x.sub||""}</div>
+    </div>`).join("");
+
+  // ── TABLE 1: Reachout Status for Domestic Influencers ──
+  const DEST_GROUPS = ["UK-Dom","US-Dom","Australia"];
+  // Exclude "Not Interested" row (requested); also exclude "Lost Cases" to avoid double-counting since Lost already includes not-interested
+  const STATUS_T1 = [
+    { label:"Contacted",      match: r => r.status === "Contacted" },
+    { label:"Replied",        match: r => r.status === "Replied" },
+    { label:"Follow Up",      match: r => r.status === "Follow up 1" },
+    { label:"Follow Up 2",    match: r => r.status === "Follow up 2" },
+    { label:"Follow Up 3",    match: r => r.status === "Follow up 3" },
+    { label:"High Ask",       match: r => r.status === "High ask" },
+    { label:"Lost",           match: r => r.status === "Lost" },
+    { label:"Onboarded Live", match: r => r.status === "Onboarded — Live" },
+    { label:"Onboarding WIP", match: r => r.status === "Onboarding WIP" },
+  ];
+
+  const normDest = d => {
+    if (!d) return "";
+    const s = d.toLowerCase().replace(/\s+/g,"-");
+    if (s.includes("uk") || s.includes("united-kingdom")) return "UK-Dom";
+    if (s.includes("us") || s.includes("united-states") || s.includes("usa")) return "US-Dom";
+    if (s.includes("australia") || s === "aus") return "Australia";
+    return d;
+  };
+
+  // Use only rows matching domestic destinations from last 3 months
+  const t1Rows = rows.filter(r => last3.includes(r.month) && DEST_GROUPS.includes(normDest(r.destination)));
+
+  // Visual distinction: light/mid/dark shade per month group
+  const MONTH_HEADER_COLORS = [
+    "bg-indigo-400", "bg-indigo-600", "bg-indigo-800"
+  ];
+  const MONTH_SUB_COLORS = [
+    "bg-indigo-50 text-indigo-700", "bg-indigo-100 text-indigo-800", "bg-indigo-200 text-indigo-900"
+  ];
+
+  const t1Head = document.getElementById("vp-table1-thead");
+  const t1Body = document.getElementById("vp-table1-tbody");
+  const t1Foot = document.getElementById("vp-table1-tfoot");
+  if (t1Head){
+    let row1 = `<th class="px-3 py-2 text-left sticky left-0 bg-zinc-50 z-10" rowspan="2">Status</th>`;
+    last3.forEach((m,mi) => {
+      row1 += `<th class="px-2 py-2 text-center ${MONTH_HEADER_COLORS[mi]} text-white" colspan="${DEST_GROUPS.length}">${escapeHtml(m)}</th>`;
+    });
+    row1 += `<th class="px-3 py-2 text-right font-semibold" rowspan="2">Grand Total</th>`;
+    let row2 = "";
+    last3.forEach((_,mi) => {
+      DEST_GROUPS.forEach(d => {
+        row2 += `<th class="px-2 py-1.5 text-right ${MONTH_SUB_COLORS[mi]} text-[10px]">${escapeHtml(d)}</th>`;
+      });
+    });
+    t1Head.innerHTML = `<tr>${row1}</tr><tr>${row2}</tr>`;
+  }
+  if (t1Body){
+    let grandTotal = 0;
+    t1Body.innerHTML = STATUS_T1.map(st => {
+      let cells = `<td class="px-3 py-2 font-medium sticky left-0 bg-white z-10">${escapeHtml(st.label)}</td>`;
+      let rowTotal = 0;
+      last3.forEach((m,mi) => {
+        const mRows = t1Rows.filter(r => r.month === m);
+        DEST_GROUPS.forEach(dg => {
+          const n = mRows.filter(r => normDest(r.destination)===dg && st.match(r)).length;
+          rowTotal += n;
+          const cellBg = mi===0?"bg-indigo-50/30":mi===1?"bg-indigo-50/60":"bg-indigo-50";
+          cells += `<td class="px-2 py-2 text-right tabular-nums ${cellBg} ${n===0?"text-zinc-300":""}">${blank(n)}</td>`;
+        });
+      });
+      grandTotal += rowTotal;
+      cells += `<td class="px-3 py-2 text-right tabular-nums font-semibold">${rowTotal||""}</td>`;
+      return `<tr class="hover:bg-zinc-50">${cells}</tr>`;
+    }).join("");
+    // Footer
+    const colTotals = [];
+    last3.forEach(m => {
+      const mRows = t1Rows.filter(r => r.month === m);
+      DEST_GROUPS.forEach(dg => {
+        colTotals.push(mRows.filter(r => normDest(r.destination)===dg).length);
+      });
+    });
+    let fCells = `<td class="px-3 py-2 font-bold sticky left-0 bg-zinc-50 z-10">Grand Total</td>`;
+    colTotals.forEach((n,ci) => {
+      const mi = Math.floor(ci/DEST_GROUPS.length);
+      const cellBg = mi===0?"bg-indigo-50/30":mi===1?"bg-indigo-50/60":"bg-indigo-50";
+      fCells += `<td class="px-2 py-2 text-right tabular-nums font-bold ${cellBg}">${n||""}</td>`;
+    });
+    fCells += `<td class="px-3 py-2 text-right tabular-nums font-bold">${colTotals.reduce((s,n)=>s+n,0)||""}</td>`;
+    if (t1Foot) t1Foot.innerHTML = `<tr class="border-t-2 border-zinc-300">${fCells}</tr>`;
+  }
+
+  // ── TABLE 2: Source Country × Status — May + June only ──
+  const MAY_JUN = last3.slice(1); // last two of last3 = May + Jun
+  const STATUS_T2 = [
+    { key:"Contacted",   label:"Contacted",    match: r => r.status === "Contacted" },
+    { key:"Replied",     label:"Replied",       match: r => r.status === "Replied" },
+    { key:"FollowUps",   label:"Follow Ups",    match: r => ["Follow up 1","Follow up 2","Follow up 3"].includes(r.status) },
+    { key:"HighAsk",     label:"High Ask",      match: r => r.status === "High ask" },
+    { key:"Lost",        label:"Lost",          match: r => r.status === "Lost" },
+    { key:"OnbLive",     label:"Onboarded Live",match: r => r.status === "Onboarded — Live" },
+    { key:"OnbWIP",      label:"Onboarding WIP",match: r => r.status === "Onboarding WIP" },
+  ];
+
+  const t2Rows = rows.filter(r => MAY_JUN.includes(r.month));
+  const t2Head = document.getElementById("vp-table2-thead");
+  const t2Body = document.getElementById("vp-table2-tbody");
+  const t2Foot = document.getElementById("vp-table2-tfoot");
+
+  // Title-case source countries and sort alphabetically
+  const allSources2 = [...new Set(t2Rows.map(r=>{
+    const s = r.source||"";
+    return s.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ").trim();
+  }).filter(s=>s&&s!=="—"))];
+
+  // Build rows data for sorting
+  const buildT2Data = (sources) => sources.map(src => {
+    // match both original and title-cased
+    const sRows = t2Rows.filter(r => {
+      const rSrc = (r.source||"").split(" ").map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" ").trim();
+      return rSrc === src;
+    });
+    const vals = STATUS_T2.map(s => sRows.filter(s.match).length);
+    const grand = sRows.length;
+    const onbLiveIdx = STATUS_T2.findIndex(s=>s.key==="OnbLive");
+    const onbWipIdx  = STATUS_T2.findIndex(s=>s.key==="OnbWIP");
+    const repliedIdx = STATUS_T2.findIndex(s=>s.key==="Replied");
+    const onbTotal = (vals[onbLiveIdx]||0)+(vals[onbWipIdx]||0);
+    const onbRateNum = grand > 0 ? (onbTotal/grand)*100 : 0;
+    const respTotalNum = grand > 0 ? ((onbTotal+(vals[repliedIdx]||0))/grand)*100 : 0;
+    return { src, vals, grand, onbTotal, onbRateNum, respTotalNum,
+      onbRate: pct(onbTotal, grand),
+      respRate: pct(onbTotal+(vals[repliedIdx]||0), grand) };
+  }).filter(d=>d.grand>0);
+
+  let t2Data = buildT2Data(allSources2);
+  // Sort
+  if (state.vpT2Sort === "onb") t2Data.sort((a,b)=>b.onbRateNum-a.onbRateNum||a.src.localeCompare(b.src));
+  else if (state.vpT2Sort === "resp") t2Data.sort((a,b)=>b.respTotalNum-a.respTotalNum||a.src.localeCompare(b.src));
+  else t2Data.sort((a,b)=>a.src.localeCompare(b.src));
+
+  if (t2Head){
+    let hCells = `<th class="px-3 py-2 text-left sticky left-0 bg-zinc-50 z-10">Source Country</th>`;
+    STATUS_T2.forEach(s => { hCells += `<th class="px-2 py-2 text-right">${escapeHtml(s.label)}</th>`; });
+    hCells += `<th class="px-3 py-2 text-right font-semibold text-zinc-700">Grand Total</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-emerald-50 text-emerald-700 font-semibold">Onboarding Rate</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-yellow-50 text-yellow-700 font-semibold">Response Rate</th>`;
+    t2Head.innerHTML = `<tr>${hCells}</tr>`;
+  }
+  if (t2Body){
+    const colTotals2 = new Array(STATUS_T2.length).fill(0);
+    let grandTotalAll2 = 0, grandOnbT = 0, grandRespN = 0;
+    const repliedIdx2 = STATUS_T2.findIndex(s=>s.key==="Replied");
+    t2Body.innerHTML = t2Data.map(({src,vals,grand,onbTotal,onbRate,respRate}) => {
+      vals.forEach((n,i) => colTotals2[i] += n);
+      grandTotalAll2 += grand; grandOnbT += onbTotal; grandRespN += (vals[repliedIdx2]||0);
+      let cells = `<td class="px-3 py-2 font-medium sticky left-0 bg-white z-10">${escapeHtml(src)}</td>`;
+      vals.forEach(n => { cells += `<td class="px-2 py-2 text-right tabular-nums ${n===0?"text-zinc-200":""}">${blank(n)}</td>`; });
+      cells += `<td class="px-3 py-2 text-right tabular-nums font-semibold">${grand}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-emerald-50 text-emerald-700 font-medium">${onbRate}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700 font-medium">${respRate}</td>`;
+      return `<tr class="hover:bg-zinc-50">${cells}</tr>`;
+    }).join("");
+    let fCells2 = `<td class="px-3 py-2 font-bold sticky left-0 bg-zinc-50 z-10">Grand Total</td>`;
+    colTotals2.forEach(n => { fCells2 += `<td class="px-2 py-2 text-right tabular-nums font-bold">${n||""}</td>`; });
+    fCells2 += `<td class="px-3 py-2 text-right tabular-nums font-bold">${grandTotalAll2}</td>`;
+    fCells2 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-emerald-50 text-emerald-700">${pct(grandOnbT,grandTotalAll2)}</td>`;
+    fCells2 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${pct(grandOnbT+grandRespN,grandTotalAll2)}</td>`;
+    if (t2Foot) t2Foot.innerHTML = `<tr class="border-t-2 border-zinc-300">${fCells2}</tr>`;
+  }
+
+  // ── TABLE 3: Channel-wise Onboarded (VP copy) ──
+  renderVpChannelOnboarded(rows);
+
+  // ── TABLE 4: Source Country MoM Onboarded Growth — April/May/June, % change only ──
+  const VP_SOURCES = ["India","Pakistan","Nepal","UK - Dom","Rest of the World","Nigeria","Zimbabwe","South Korea",
+    "Malaysia","Germany","China","Cambodia","Vietnam","US - Dom","Thailand","Singapore","Philippines","Peru",
+    "Middle East- Turkey","Middle East - Iran","Japan","Indonesia","Hong Kong","Canada","Australia"];
+
+  const t4Head = document.getElementById("vp-table4-thead");
+  const t4Body = document.getElementById("vp-table4-tbody");
+  const t4Foot = document.getElementById("vp-table4-tfoot");
+
+  const [m1, m2, m3] = last3; // April, May, June
+
+  const srcMonthCountFuzzy = (src, month) => {
+    const sl = src.toLowerCase().replace(/\s+/g," ").trim();
+    return rows.filter(r => r.month===month && isOnb(r) &&
+      (r.source||"").toLowerCase().replace(/\s+/g," ").trim() === sl).length;
+  };
+
+  const sourceData4 = VP_SOURCES.map(src => {
+    const c1 = srcMonthCountFuzzy(src, m1);
+    const c2 = srcMonthCountFuzzy(src, m2);
+    const c3 = srcMonthCountFuzzy(src, m3);
+    const mom1 = mom(c2, c1);
+    const mom2 = mom(c3, c2);
+    const total = c1+c2+c3;
+    // For sorting: use total onboards as proxy for "high to low"
+    return { src, c1, c2, c3, mom1, mom2, total };
+  });
+
+  // Sort: alpha by default, desc by total onboards for "High → Low"
+  const sorted4 = [...sourceData4].sort((a,b) =>
+    state.vpSort === "desc" ? b.total - a.total : a.src.localeCompare(b.src)
+  );
+
+  if (t4Head){
+    let hCells = `<th class="px-3 py-2 text-left sticky left-0 bg-zinc-50 z-10">Source Country</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-indigo-50 text-indigo-800">${escapeHtml(m1)}</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-indigo-100 text-indigo-800">→ ${escapeHtml(m2)} %</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-indigo-200 text-indigo-800">${escapeHtml(m2)}</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-indigo-300 text-indigo-900">→ ${escapeHtml(m3)} %</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-indigo-600 text-white">${escapeHtml(m3)}</th>`;
+    t4Head.innerHTML = `<tr>${hCells}</tr>`;
+  }
+  if (t4Body){
+    t4Body.innerHTML = sorted4.map(({src,c1,c2,c3,mom1,mom2,total}) => {
+      let cells = `<td class="px-3 py-2 font-medium sticky left-0 bg-white z-10">${escapeHtml(src)}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-50 ${c1===0?"text-zinc-300":""}">${blank(c1)}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-100 ${momColor(mom1)}">${mom1}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-200 ${c2===0?"text-zinc-300":""}">${blank(c2)}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-300 ${momColor(mom2)}">${mom2}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-50 font-semibold ${c3===0?"text-zinc-300":""}">${blank(c3)}</td>`;
+      return `<tr class="hover:bg-zinc-50">${cells}</tr>`;
+    }).join("");
+
+    const tot1=sorted4.reduce((s,r)=>s+r.c1,0);
+    const tot2=sorted4.reduce((s,r)=>s+r.c2,0);
+    const tot3=sorted4.reduce((s,r)=>s+r.c3,0);
+    const totMom1 = mom(tot2,tot1), totMom2 = mom(tot3,tot2);
+    let fCells4 = `<td class="px-3 py-2 font-bold sticky left-0 bg-zinc-50 z-10">Grand Total</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-50">${tot1||""}</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-100 ${momColor(totMom1)}">${totMom1}</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-200">${tot2||""}</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-300 ${momColor(totMom2)}">${totMom2}</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-50">${tot3||""}</td>`;
+    if (t4Foot) t4Foot.innerHTML = `<tr class="border-t-2 border-zinc-300">${fCells4}</tr>`;
+  }
+
+  // Update subtitles
+  const sub1 = document.getElementById("vp-t1-subtitle");
+  if (sub1) sub1.textContent = `UK-Dom · US-Dom · Australia — ${m1}, ${m2}, ${m3}`;
+  const sub4 = document.getElementById("vp-t4-subtitle");
+  if (sub4) sub4.textContent = `${m1} · ${m2} · ${m3} — % MoM change · onboarded live + WIP`;
+}
+
+function renderVpChannelOnboarded(rows){
+  const tbody = document.getElementById("vp-ch-onb-tbody");
+  const tfoot = document.getElementById("vp-ch-onb-tfoot");
+  const thead = document.getElementById("vp-ch-onb-thead");
+  if (!tbody) return;
+
+  const isOnb = r => r.status === "Onboarded — Live" || r.status === "Onboarding WIP";
+  const last3 = getLastThreeMonths();
+  const allMonthsSorted = [...new Set(rows.map(r=>r.month).filter(Boolean))].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
+
+  if (state.vpChannelView === "count"){
+    if (thead) thead.innerHTML = `<tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">Onboarded</th></tr>`;
+    const onbRows = rows.filter(isOnb);
+    const platCounts = counts(onbRows,"platform");
+    const grand = platCounts.reduce((s,p)=>s+p[1],0);
+    tbody.innerHTML = platCounts.map(([p,n])=>`<tr class="hover:bg-zinc-50"><td class="px-3 py-2">${escapeHtml(p)}</td><td class="px-3 py-2 text-right tabular-nums font-medium">${n}</td></tr>`).join("");
+    if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300"><td class="px-3 py-2">Grand Total</td><td class="px-3 py-2 text-right tabular-nums font-bold">${grand}</td></tr>`;
+  } else {
+    // MoM% — compare last two of last 3 months
+    const [,m2,m3] = last3;
+    if (thead) thead.innerHTML = `<tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">${escapeHtml(m2)}</th><th class="px-3 py-2 text-right">${escapeHtml(m3)}</th><th class="px-3 py-2 text-right">MoM %</th></tr>`;
+    const prevOnb = rows.filter(r => r.month===m2 && isOnb(r));
+    const curOnb  = rows.filter(r => r.month===m3 && isOnb(r));
+    const prevMap = new Map(counts(prevOnb,"platform"));
+    const curMap  = new Map(counts(curOnb,"platform"));
+    const plats = [...new Set([...prevMap.keys(),...curMap.keys()])].sort();
+    tbody.innerHTML = plats.map(p => {
+      const prev=prevMap.get(p)||0, cur=curMap.get(p)||0;
+      let momStr="—", momCls="";
+      if (prev>0){ const pct2=((cur-prev)/prev*100); momStr=(pct2>=0?"+":"")+pct2.toFixed(1)+"%"; momCls=pct2>0?"text-emerald-600 font-semibold":pct2<0?"text-rose-600 font-semibold":""; }
+      else if (cur>0){ momStr="New"; momCls="text-indigo-600 font-semibold"; }
+      return `<tr class="hover:bg-zinc-50"><td class="px-3 py-2">${escapeHtml(p)}</td><td class="px-3 py-2 text-right tabular-nums text-zinc-400">${prev||"—"}</td><td class="px-3 py-2 text-right tabular-nums font-medium">${cur||"—"}</td><td class="px-3 py-2 text-right tabular-nums ${momCls}">${momStr}</td></tr>`;
+    }).join("");
+    const pt=plats.reduce((s,p)=>s+(prevMap.get(p)||0),0);
+    const ct=plats.reduce((s,p)=>s+(curMap.get(p)||0),0);
+    const tMom=pt>0?((ct-pt)/pt*100):null;
+    const tStr=tMom!=null?(tMom>=0?"+":"")+tMom.toFixed(1)+"%":"—";
+    const tCls=tMom!=null?(tMom>0?"text-emerald-600":tMom<0?"text-rose-600":""):"";
+    if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300"><td class="px-3 py-2">Grand Total</td><td class="px-3 py-2 text-right tabular-nums text-zinc-400 font-semibold">${pt||"—"}</td><td class="px-3 py-2 text-right tabular-nums font-bold">${ct||"—"}</td><td class="px-3 py-2 text-right tabular-nums font-bold ${tCls}">${tStr}</td></tr>`;
+  }
+}
+
+function renderPocBreakdownTable(rows){
+  state._pocBreakdownRows = rows;
+  const thead  = document.getElementById("poc-breakdown-thead");
+  const tbody  = document.getElementById("poc-breakdown-tbody");
+  const tfoot  = document.getElementById("poc-breakdown-tfoot");
+  const warn   = document.getElementById("poc-breakdown-warning");
+  const togglesHost = document.getElementById("poc-week-toggles");
+  if (!tbody) return;
+
+  if (state.pocExpandedCol === undefined) state.pocExpandedCol = null;
+
+  // POC names — alphabetical
+  const EXCLUDED_MANAGER = new Set(["Palash"]);
+  const pocNames = [...new Set(rows.map(r=>r.poc).filter(p=>p&&p!=="—"&&!EXCLUDED_MANAGER.has(p)))]
+    .sort((a,b)=>a.localeCompare(b));
+  const blank = n => n === 0 ? "" : n;
+
+  const STATUS_COLS = [
+    { key:"Contacted",   label:"Contacted",  match: r => r.status === "Contacted" },
+    { key:"Replied",     label:"Replied",     match: r => r.status === "Replied" },
+    { key:"Follow up 1", label:"Follow Up",   match: r => r.status === "Follow up 1" },
+    { key:"Follow up 2", label:"Follow Up 2", match: r => r.status === "Follow up 2" },
+    { key:"Follow up 3", label:"Follow Up 3", match: r => r.status === "Follow up 3" },
+    { key:"Onboarded",   label:"Onboarded",   match: r => r.status === "Onboarded — Live" || r.status === "Onboarding WIP",
+      splitWip: true }, // special: split into Live + WIP in weekly view
+  ];
+
+  // Week bounds
+  const selectedMonths = [...state.filters.prospects.month];
+  const allMonthsSorted = [...new Set(rows.map(r=>r.month).filter(Boolean))].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
+  const currentMonthLabel = new Date().toLocaleString("en-US",{month:"long",year:"numeric"});
+  const multiMonth = selectedMonths.length > 1;
+  let targetMonth = selectedMonths.length === 1 ? selectedMonths[0]
+    : allMonthsSorted.includes(currentMonthLabel) ? currentMonthLabel
+    : allMonthsSorted[allMonthsSorted.length-1];
+  if (multiMonth) targetMonth = null;
+
+  let weekBounds = [];
+  if (targetMonth){
+    const mp = targetMonth.match(/^([A-Za-z]+)\s+(\d{4})$/);
+    if (mp){
+      const ML = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+      const mIdx = ML.indexOf(mp[1]), yr = parseInt(mp[2]);
+      const lastDay = new Date(yr, mIdx+1, 0).getDate();
+      weekBounds = [
+        {label:"Week 1",d1:1,d2:7},{label:"Week 2",d1:8,d2:15},{label:"Week 3",d1:16,d2:23},{label:"Week 4",d1:24,d2:lastDay}
+      ].map(w=>({...w, start:new Date(yr,mIdx,w.d1,0,0,0,0), end:new Date(yr,mIdx,w.d2,23,59,59,999)}));
+    }
+  }
+
+  const canExpand = weekBounds.length > 0;
+  if (!canExpand) state.pocExpandedCol = null;
+  if (warn) warn.classList.toggle("hidden", !multiMonth);
+
+  // Toggle buttons (top-right)
+  if (togglesHost){
+    togglesHost.innerHTML = STATUS_COLS.map((col, ci) => {
+      const isActive = state.pocExpandedCol === ci;
+      return `<button data-col-toggle="${ci}"
+        class="text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors
+          ${isActive ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-zinc-500 border-zinc-300 hover:border-indigo-400 hover:text-indigo-600"}
+          ${canExpand ? "" : "opacity-40 cursor-not-allowed"}"
+        ${canExpand ? "" : "disabled"}
+        title="${canExpand ? "Show weekly breakdown for "+col.label : "Select a single month to enable"}"
+      >${escapeHtml(col.label)} ▸ W</button>`;
+    }).join("");
+    togglesHost.querySelectorAll("[data-col-toggle]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (!canExpand) return;
+        const ci = parseInt(btn.dataset.colToggle);
+        state.pocExpandedCol = state.pocExpandedCol === ci ? null : ci;
+        renderPocBreakdownTable(rows);
+      });
+    });
+  }
+
+  const expCol = state.pocExpandedCol;
+  const expColDef = expCol !== null ? STATUS_COLS[expCol] : null;
+
+  // ── WEEKLY VIEW (table switches entirely) ──
+  if (expColDef && canExpand){
+    const isOnboarded = !!expColDef.splitWip;
+    const monthLabel = targetMonth || "";
+
+    // week helper
+    const wkCount = (poc, matchFn, wi) => {
+      const w = weekBounds[wi];
+      return rows.filter(r =>
+        r.poc === poc && matchFn(r) &&
+        r.reachDate instanceof Date && !isNaN(r.reachDate) &&
+        r.reachDate >= w.start && r.reachDate <= w.end
+      ).length;
+    };
+
+    if (isOnboarded){
+      // Onboarded: show Live and WIP separately per week
+      const matchLive = r => r.status === "Onboarded — Live";
+      const matchWip  = r => r.status === "Onboarding WIP";
+
+      // Header
+      let hCells = `<th class="px-3 py-2 text-left sticky left-0 bg-zinc-50 z-10">POC</th>`;
+      weekBounds.forEach(w => {
+        hCells += `<th class="px-2 py-2 text-right bg-indigo-600 text-white" colspan="2">${w.label}</th>`;
+      });
+      hCells += `<th class="px-3 py-2 text-right bg-indigo-800 text-white font-semibold" colspan="2">Total</th>`;
+      if (thead) thead.innerHTML = `
+        <tr>${hCells}</tr>
+        <tr>
+          <th class="px-3 py-2 text-left sticky left-0 bg-zinc-50 z-10 text-[10px]">${escapeHtml(monthLabel)}</th>
+          ${weekBounds.map(()=>`<th class="px-2 py-1 text-right bg-indigo-50 text-emerald-700 text-[10px]">Live</th><th class="px-2 py-1 text-right bg-indigo-50 text-teal-600 text-[10px]">WIP</th>`).join("")}
+          <th class="px-3 py-1 text-right bg-indigo-100 text-emerald-700 text-[10px] font-semibold">Live</th>
+          <th class="px-3 py-1 text-right bg-indigo-100 text-teal-600 text-[10px] font-semibold">WIP</th>
+        </tr>`;
+
+      const totLive = [0,0,0,0], totWip = [0,0,0,0];
+      let grandLive = 0, grandWip = 0;
+      tbody.innerHTML = pocNames.map((poc, rowIdx) => {
+        const wLive = weekBounds.map((_,wi)=>wkCount(poc,matchLive,wi));
+        const wWip  = weekBounds.map((_,wi)=>wkCount(poc,matchWip,wi));
+        wLive.forEach((n,i)=>totLive[i]+=n); wWip.forEach((n,i)=>totWip[i]+=n);
+        const tL = wLive.reduce((s,n)=>s+n,0), tW = wWip.reduce((s,n)=>s+n,0);
+        grandLive+=tL; grandWip+=tW;
+        const zebraBase = rowIdx%2===0 ? "bg-white" : "bg-zinc-50/80";
+        let cells = `<td class="px-3 py-2 font-medium sticky left-0 ${zebraBase} z-10">${escapeHtml(poc)}</td>`;
+        weekBounds.forEach((_,wi)=>{
+          cells += `<td class="px-2 py-2 text-right tabular-nums bg-indigo-50 ${wLive[wi]===0?"text-zinc-300":""}">${blank(wLive[wi])}</td>`;
+          cells += `<td class="px-2 py-2 text-right tabular-nums bg-indigo-50 ${wWip[wi]===0?"text-zinc-300":""}">${blank(wWip[wi])}</td>`;
+        });
+        cells += `<td class="px-3 py-2 text-right tabular-nums font-semibold text-emerald-700">${tL||"—"}</td>`;
+        cells += `<td class="px-3 py-2 text-right tabular-nums font-semibold text-teal-600">${tW||"—"}</td>`;
+        return `<tr class="${zebraBase} hover:bg-indigo-50">${cells}</tr>`;
+      }).join("");
+
+      let fCells = `<td class="px-3 py-2 font-bold sticky left-0 bg-zinc-50 z-10">Team total</td>`;
+      weekBounds.forEach((_,wi)=>{
+        fCells += `<td class="px-2 py-2 text-right tabular-nums font-bold bg-indigo-50">${totLive[wi]||""}</td>`;
+        fCells += `<td class="px-2 py-2 text-right tabular-nums font-bold bg-indigo-50">${totWip[wi]||""}</td>`;
+      });
+      fCells += `<td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">${grandLive||"—"}</td>`;
+      fCells += `<td class="px-3 py-2 text-right tabular-nums font-bold text-teal-600">${grandWip||"—"}</td>`;
+      if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">${fCells}</tr>`;
+
+    } else {
+      // Standard col: single value per week
+      const matchFn = expColDef.match;
+
+      // Header
+      let hCells = `<th class="px-3 py-2 text-left sticky left-0 bg-zinc-50 z-10">POC</th>`;
+      weekBounds.forEach(w => {
+        hCells += `<th class="px-3 py-2 text-right bg-indigo-600 text-white">${w.label}<br><span class="text-[10px] font-normal opacity-75">${escapeHtml(w.d1+"–"+w.d2)}</span></th>`;
+      });
+      hCells += `<th class="px-3 py-2 text-right bg-indigo-800 text-white font-semibold">Total<br><span class="text-[10px] font-normal opacity-75">${escapeHtml(expColDef.label)}</span></th>`;
+      if (thead) thead.innerHTML = `<tr>${hCells}</tr>`;
+
+      const weekTotals = [0,0,0,0]; let grandTotal = 0;
+      tbody.innerHTML = pocNames.map((poc, rowIdx) => {
+        const wCounts = weekBounds.map((_,wi)=>wkCount(poc,matchFn,wi));
+        wCounts.forEach((n,i)=>weekTotals[i]+=n);
+        const total = wCounts.reduce((s,n)=>s+n,0);
+        grandTotal += total;
+        const zebraBase = rowIdx%2===0 ? "bg-white" : "bg-zinc-50/80";
+        let cells = `<td class="px-3 py-2 font-medium sticky left-0 ${zebraBase} z-10">${escapeHtml(poc)}</td>`;
+        wCounts.forEach(n => {
+          cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-50 ${n===0?"text-zinc-300":""}">${blank(n)}</td>`;
+        });
+        cells += `<td class="px-3 py-2 text-right tabular-nums font-semibold bg-indigo-100">${total||"—"}</td>`;
+        return `<tr class="${zebraBase} hover:bg-indigo-50">${cells}</tr>`;
+      }).join("");
+
+      let fCells = `<td class="px-3 py-2 font-bold sticky left-0 bg-zinc-50 z-10">Team total</td>`;
+      weekTotals.forEach(n => { fCells += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-50">${n||""}</td>`; });
+      fCells += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-100">${grandTotal||"—"}</td>`;
+      if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">${fCells}</tr>`;
+    }
+    return; // weekly view rendered — done
+  }
+
+  // ── DEFAULT VIEW (all statuses) ──
+  let headerCells = `<th class="px-3 py-2 text-left sticky left-0 bg-zinc-50 z-10">POC</th>`;
+  STATUS_COLS.forEach(col => {
+    headerCells += `<th class="px-3 py-2 text-right">${escapeHtml(col.label)}</th>`;
+  });
+  headerCells += `<th class="px-3 py-2 text-right font-semibold text-zinc-700">Grand Total</th>`;
+  headerCells += `<th class="px-3 py-2 text-right bg-yellow-50 text-yellow-700 font-semibold">Response Rate</th>`;
+  if (thead) thead.innerHTML = `<tr>${headerCells}</tr>`;
+
+  const colTotals = new Array(STATUS_COLS.length).fill(0);
+  let grandTotalAll = 0;
+
+  tbody.innerHTML = pocNames.map((poc, rowIdx) => {
+    const pocRows = rows.filter(r => r.poc === poc);
+    const vals = STATUS_COLS.map(c => pocRows.filter(c.match).length);
+    vals.forEach((n,i) => colTotals[i] += n);
+    const grand = pocRows.length;
+    grandTotalAll += grand;
+    const onbIdx = STATUS_COLS.findIndex(c=>c.key==="Onboarded");
+    const repIdx = STATUS_COLS.findIndex(c=>c.key==="Replied");
+    const responseRate = grand > 0 ? (((vals[onbIdx]+vals[repIdx])/grand)*100).toFixed(2)+"%" : "—";
+    const zebraBase = rowIdx%2===0 ? "bg-white" : "bg-zinc-50/80";
+    let cells = `<td class="px-3 py-2 font-medium sticky left-0 ${zebraBase} z-10">${escapeHtml(poc)}</td>`;
+    vals.forEach(n => {
+      cells += `<td class="px-3 py-2 text-right tabular-nums ${n===0?"text-zinc-200":""}">${blank(n)}</td>`;
+    });
+    cells += `<td class="px-3 py-2 text-right tabular-nums font-semibold">${grand}</td>`;
+    cells += `<td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700 font-medium">${responseRate}</td>`;
+    return `<tr class="${zebraBase} hover:bg-indigo-50">${cells}</tr>`;
+  }).join("");
+
+  const grandOnb = colTotals[STATUS_COLS.findIndex(c=>c.key==="Onboarded")]||0;
+  const grandRep = colTotals[STATUS_COLS.findIndex(c=>c.key==="Replied")]||0;
+  const grandRR  = grandTotalAll > 0 ? (((grandOnb+grandRep)/grandTotalAll)*100).toFixed(2)+"%" : "—";
+  let footCells = `<td class="px-3 py-2 font-bold sticky left-0 bg-zinc-50 z-10">Grand Total</td>`;
+  colTotals.forEach(n => { footCells += `<td class="px-3 py-2 text-right tabular-nums font-bold">${n||""}</td>`; });
+  footCells += `<td class="px-3 py-2 text-right tabular-nums font-bold">${grandTotalAll}</td>`;
+  footCells += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${grandRR}</td>`;
+  if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">${footCells}</tr>`;
 }
 
 function renderProspectTable(rows){
