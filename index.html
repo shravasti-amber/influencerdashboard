@@ -1528,92 +1528,87 @@ function renderVpTab(){
     </div>`).join("");
 
   // ── TABLE 1: Reachout Status for Domestic Influencers ──
-  const DEST_GROUPS = ["UK-Dom","US-Dom","Australia"];
-  // Exclude "Not Interested" row (requested); also exclude "Lost Cases" to avoid double-counting since Lost already includes not-interested
-  const STATUS_T1 = [
-    { label:"Contacted",      match: r => r.status === "Contacted" },
-    { label:"Replied",        match: r => r.status === "Replied" },
-    { label:"Follow Up",      match: r => r.status === "Follow up 1" },
-    { label:"Follow Up 2",    match: r => r.status === "Follow up 2" },
-    { label:"Follow Up 3",    match: r => r.status === "Follow up 3" },
-    { label:"High Ask",       match: r => r.status === "High ask" },
-    { label:"Lost",           match: r => r.status === "Lost" },
-    { label:"Onboarded Live", match: r => r.status === "Onboarded — Live" },
-    { label:"Onboarding WIP", match: r => r.status === "Onboarding WIP" },
-  ];
+  const DOMESTIC_SOURCES = ["Australia", "UK - Dom", "US - Dom"];
+  const STATUSES_T1 = ["Contacted", "Follow up", "Follow up 2", "Follow up 3", "Lost cases", "Onboarded", "Replied", "High ask"];
 
-  const normDest = d => {
-    if (!d) return "";
-    const s = d.toLowerCase().replace(/\s+/g,"-");
-    if (s.includes("uk") || s.includes("united-kingdom")) return "UK-Dom";
-    if (s.includes("us") || s.includes("united-states") || s.includes("usa")) return "US-Dom";
-    if (s.includes("australia") || s === "aus") return "Australia";
-    return d;
+  const normSource = s => {
+    if (!s) return "";
+    const val = s.toString().trim().toLowerCase();
+    if (val.includes("uk") || val.includes("united kingdom")) return "UK - Dom";
+    if (val.includes("us") || val.includes("united states") || val.includes("usa")) return "US - Dom";
+    if (val.includes("australia") || val === "aus") return "Australia";
+    return s.toString().trim();
   };
 
-  // Use only rows matching domestic destinations from last 3 months
-  const t1Rows = rows.filter(r => last3.includes(r.month) && DEST_GROUPS.includes(normDest(r.destination)));
+  function matchStatus(r, status) {
+    if (status === "Contacted") return r.status === "Contacted";
+    if (status === "Follow up") return r.status === "Follow up 1";
+    if (status === "Follow up 2") return r.status === "Follow up 2";
+    if (status === "Follow up 3") return r.status === "Follow up 3";
+    if (status === "Lost cases") return r.status === "Lost";
+    if (status === "Onboarded") return r.status === "Onboarded — Live" || r.status === "Onboarding WIP";
+    if (status === "Replied") return r.status === "Replied";
+    if (status === "High ask") return r.status === "High ask" || r.status === "In talks";
+    return false;
+  }
 
-  // Visual distinction: light/mid/dark shade per month group
-  const MONTH_HEADER_COLORS = [
-    "bg-indigo-400", "bg-indigo-600", "bg-indigo-800"
-  ];
-  const MONTH_SUB_COLORS = [
-    "bg-indigo-50 text-indigo-700", "bg-indigo-100 text-indigo-800", "bg-indigo-200 text-indigo-900"
-  ];
+  // Use only rows matching domestic source countries from last 3 months with valid Reachout Date
+  const t1Rows = rows.filter(r => 
+    last3.includes(r.month) && 
+    DOMESTIC_SOURCES.includes(normSource(r.source)) && 
+    r.reachDate !== null
+  );
 
   const t1Head = document.getElementById("vp-table1-thead");
   const t1Body = document.getElementById("vp-table1-tbody");
   const t1Foot = document.getElementById("vp-table1-tfoot");
-  if (t1Head){
-    let row1 = `<th class="px-3 py-2 text-left sticky left-0 bg-zinc-50 z-10" rowspan="2">Status</th>`;
-    last3.forEach((m,mi) => {
-      row1 += `<th class="px-2 py-2 text-center ${MONTH_HEADER_COLORS[mi]} text-white" colspan="${DEST_GROUPS.length}">${escapeHtml(m)}</th>`;
-    });
-    row1 += `<th class="px-3 py-2 text-right font-semibold" rowspan="2">Grand Total</th>`;
-    let row2 = "";
-    last3.forEach((_,mi) => {
-      DEST_GROUPS.forEach(d => {
-        row2 += `<th class="px-2 py-1.5 text-right ${MONTH_SUB_COLORS[mi]} text-[10px]">${escapeHtml(d)}</th>`;
-      });
-    });
-    t1Head.innerHTML = `<tr>${row1}</tr><tr>${row2}</tr>`;
+
+  if (t1Head) {
+    t1Head.innerHTML = `
+      <tr>
+        <th class="px-3 py-2 text-left bg-zinc-50 sticky left-0 z-10">Source Country</th>
+        ${STATUSES_T1.map(st => `<th class="px-2 py-2 text-right">${escapeHtml(st)}</th>`).join("")}
+        <th class="px-3 py-2 text-right font-semibold">Grand Total</th>
+      </tr>
+    `;
   }
-  if (t1Body){
-    let grandTotal = 0;
-    t1Body.innerHTML = STATUS_T1.map(st => {
-      let cells = `<td class="px-3 py-2 font-medium sticky left-0 bg-white z-10">${escapeHtml(st.label)}</td>`;
+
+  if (t1Body) {
+    let tbodyHtml = "";
+    const colTotals = Array(STATUSES_T1.length).fill(0);
+    let totalGrand = 0;
+
+    DOMESTIC_SOURCES.forEach(src => {
+      const srcRows = t1Rows.filter(r => normSource(r.source) === src);
       let rowTotal = 0;
-      last3.forEach((m,mi) => {
-        const mRows = t1Rows.filter(r => r.month === m);
-        DEST_GROUPS.forEach(dg => {
-          const n = mRows.filter(r => normDest(r.destination)===dg && st.match(r)).length;
-          rowTotal += n;
-          const cellBg = mi===0?"bg-indigo-50/30":mi===1?"bg-indigo-50/60":"bg-indigo-50";
-          cells += `<td class="px-2 py-2 text-right tabular-nums ${cellBg} ${n===0?"text-zinc-300":""}">${blank(n)}</td>`;
-        });
+      let cellsHtml = `<td class="px-3 py-2 font-medium bg-white sticky left-0 z-10">${escapeHtml(src)}</td>`;
+
+      STATUSES_T1.forEach((st, idx) => {
+        const count = srcRows.filter(r => matchStatus(r, st)).length;
+        rowTotal += count;
+        colTotals[idx] += count;
+        cellsHtml += `<td class="px-2 py-2 text-right tabular-nums ${count === 0 ? "text-zinc-300" : ""}">${blank(count)}</td>`;
       });
-      grandTotal += rowTotal;
-      cells += `<td class="px-3 py-2 text-right tabular-nums font-semibold">${rowTotal||""}</td>`;
-      return `<tr class="hover:bg-zinc-50">${cells}</tr>`;
-    }).join("");
+
+      totalGrand += rowTotal;
+      cellsHtml += `<td class="px-3 py-2 text-right tabular-nums font-semibold">${rowTotal || ""}</td>`;
+      tbodyHtml += `<tr class="hover:bg-zinc-50">${cellsHtml}</tr>`;
+    });
+
+    t1Body.innerHTML = tbodyHtml;
+
     // Footer
-    const colTotals = [];
-    last3.forEach(m => {
-      const mRows = t1Rows.filter(r => r.month === m);
-      DEST_GROUPS.forEach(dg => {
-        colTotals.push(mRows.filter(r => normDest(r.destination)===dg).length);
-      });
-    });
-    let fCells = `<td class="px-3 py-2 font-bold sticky left-0 bg-zinc-50 z-10">Grand Total</td>`;
-    colTotals.forEach((n,ci) => {
-      const mi = Math.floor(ci/DEST_GROUPS.length);
-      const cellBg = mi===0?"bg-indigo-50/30":mi===1?"bg-indigo-50/60":"bg-indigo-50";
-      fCells += `<td class="px-2 py-2 text-right tabular-nums font-bold ${cellBg}">${n||""}</td>`;
-    });
-    fCells += `<td class="px-3 py-2 text-right tabular-nums font-bold">${colTotals.reduce((s,n)=>s+n,0)||""}</td>`;
-    if (t1Foot) t1Foot.innerHTML = `<tr class="border-t-2 border-zinc-300">${fCells}</tr>`;
+    if (t1Foot) {
+      t1Foot.innerHTML = `
+        <tr class="border-t-2 border-zinc-300 font-bold bg-zinc-50">
+          <td class="px-3 py-2 sticky left-0 bg-zinc-50 z-10">Grand Total</td>
+          ${colTotals.map(n => `<td class="px-2 py-2 text-right tabular-nums">${n || ""}</td>`).join("")}
+          <td class="px-3 py-2 text-right tabular-nums">${totalGrand || ""}</td>
+        </tr>
+      `;
+    }
   }
+
 
   // ── TABLE 2: Source Country × Status — May + June only ──
   const MAY_JUN = last3.slice(1); // last two of last3 = May + Jun
