@@ -346,17 +346,16 @@
         </div>
       </div>
 
-      <!-- Table 2: Source Country × Reachout Status -->
+      <!-- Table 2: Source Country x Reachout Status -->
       <div class="bg-white rounded-xl border border-zinc-200 p-4">
         <div class="flex items-center justify-between mb-3">
           <div>
             <h3 class="font-semibold text-sm">Source Country × Reachout Status</h3>
-            <p class="text-xs text-zinc-500 mt-0.5">May 2026 &amp; June 2026 · onboarding rate &amp; response rate</p>
+            <p class="text-xs text-zinc-500 mt-0.5" id="vp-t2-subtitle">all months · onboarding rate &amp; response rate</p>
           </div>
           <div class="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
             <button id="vp-t2-sort-alpha" class="px-2.5 py-1 bg-indigo-600 text-white font-medium" onclick="setVpT2Sort('alpha')">A → Z</button>
-            <button id="vp-t2-sort-onb" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setVpT2Sort('onb')">High Onboarding</button>
-            <button id="vp-t2-sort-resp" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setVpT2Sort('resp')">High Response</button>
+            <button id="vp-t2-sort-grand" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setVpT2Sort('grand')">High → Low</button>
           </div>
         </div>
         <div class="overflow-x-auto">
@@ -1397,7 +1396,8 @@ function setVpSort(dir){
 
 function setVpT2Sort(mode){
   state.vpT2Sort = mode;
-  ["alpha","onb","resp"].forEach(m => {
+  // Update the two sort button styles (alpha and grand only)
+  ["alpha","grand"].forEach(m => {
     const btn = document.getElementById("vp-t2-sort-"+m);
     if (btn) btn.className = m===mode ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
   });
@@ -1615,7 +1615,6 @@ function renderVpTab(){
 
     t1Body.innerHTML = tbodyHtml;
 
-    // Footer
     if (t1Foot) {
       t1Foot.innerHTML = `
         <tr class="border-t-2 border-zinc-300 font-bold bg-zinc-50">
@@ -1628,8 +1627,18 @@ function renderVpTab(){
   }
 
 
-  // ── TABLE 2: Source Country × Status — May + June only ──
-  const MAY_JUN = last3.slice(1); // last two of last3 = May + Jun
+  // ── TABLE 2: Source Country × Status ──
+  const t2MonthFilter = selectedVpMonths.length > 0 ? selectedVpMonths : allDataMonths;
+  const t2Subtitle = document.getElementById("vp-t2-subtitle");
+  if (t2Subtitle) {
+    if (selectedVpMonths.length > 0) {
+      const sortedSel2 = [...selectedVpMonths].sort((a,b) => monthSortKey(a) - monthSortKey(b));
+      t2Subtitle.textContent = `${sortedSel2.join(", ")} · onboarding rate & response rate`;
+    } else {
+      t2Subtitle.textContent = `all months · onboarding rate & response rate`;
+    }
+  }
+
   const STATUS_T2 = [
     { key:"Contacted",   label:"Contacted",    match: r => r.status === "Contacted" },
     { key:"Replied",     label:"Replied",       match: r => r.status === "Replied" },
@@ -1640,20 +1649,17 @@ function renderVpTab(){
     { key:"OnbWIP",      label:"Onboarding WIP",match: r => r.status === "Onboarding WIP" },
   ];
 
-  const t2Rows = rows.filter(r => MAY_JUN.includes(r.month));
+  const t2Rows = rows.filter(r => t2MonthFilter.includes(r.month));
   const t2Head = document.getElementById("vp-table2-thead");
   const t2Body = document.getElementById("vp-table2-tbody");
   const t2Foot = document.getElementById("vp-table2-tfoot");
 
-  // Title-case source countries and sort alphabetically
   const allSources2 = [...new Set(t2Rows.map(r=>{
     const s = r.source||"";
     return s.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ").trim();
   }).filter(s=>s&&s!=="—"))];
 
-  // Build rows data for sorting
   const buildT2Data = (sources) => sources.map(src => {
-    // match both original and title-cased
     const sRows = t2Rows.filter(r => {
       const rSrc = (r.source||"").split(" ").map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" ").trim();
       return rSrc === src;
@@ -1664,23 +1670,20 @@ function renderVpTab(){
     const onbWipIdx  = STATUS_T2.findIndex(s=>s.key==="OnbWIP");
     const repliedIdx = STATUS_T2.findIndex(s=>s.key==="Replied");
     const onbTotal = (vals[onbLiveIdx]||0)+(vals[onbWipIdx]||0);
-    const onbRateNum = grand > 0 ? (onbTotal/grand)*100 : 0;
-    const respTotalNum = grand > 0 ? ((onbTotal+(vals[repliedIdx]||0))/grand)*100 : 0;
-    return { src, vals, grand, onbTotal, onbRateNum, respTotalNum,
+    return { src, vals, grand, onbTotal,
       onbRate: pct(onbTotal, grand),
       respRate: pct(onbTotal+(vals[repliedIdx]||0), grand) };
   }).filter(d=>d.grand>0);
 
   let t2Data = buildT2Data(allSources2);
-  // Sort
-  if (state.vpT2Sort === "onb") t2Data.sort((a,b)=>b.onbRateNum-a.onbRateNum||a.src.localeCompare(b.src));
-  else if (state.vpT2Sort === "resp") t2Data.sort((a,b)=>b.respTotalNum-a.respTotalNum||a.src.localeCompare(b.src));
+  if (state.vpT2Sort === "grand") t2Data.sort((a,b)=>b.grand-a.grand||a.src.localeCompare(b.src));
   else t2Data.sort((a,b)=>a.src.localeCompare(b.src));
 
   if (t2Head){
     let hCells = `<th class="px-3 py-2 text-left sticky left-0 bg-zinc-50 z-10">Source Country</th>`;
     STATUS_T2.forEach(s => { hCells += `<th class="px-2 py-2 text-right">${escapeHtml(s.label)}</th>`; });
-    hCells += `<th class="px-3 py-2 text-right font-semibold text-zinc-700">Grand Total</th>`;
+    const grandActive = state.vpT2Sort === "grand";
+    hCells += `<th class="px-3 py-2 text-right font-semibold text-zinc-700 cursor-pointer select-none hover:bg-indigo-50 hover:text-indigo-700 ${grandActive ? 'bg-indigo-100 text-indigo-700' : ''}" onclick="setVpT2Sort(state.vpT2Sort === 'grand' ? 'alpha' : 'grand')" title="Click to sort high to low">Grand Total ${grandActive ? '▼' : '⇅'}</th>`;
     hCells += `<th class="px-3 py-2 text-right bg-emerald-50 text-emerald-700 font-semibold">Onboarding Rate</th>`;
     hCells += `<th class="px-3 py-2 text-right bg-yellow-50 text-yellow-700 font-semibold">Response Rate</th>`;
     t2Head.innerHTML = `<tr>${hCells}</tr>`;
