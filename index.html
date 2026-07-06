@@ -1776,9 +1776,7 @@ function renderVpTab(){
     if (t4Foot) t4Foot.innerHTML = `<tr class="border-t-2 border-zinc-300">${fCells4}</tr>`;
   }
 
-  // Update subtitles
-  const sub1 = document.getElementById("vp-t1-subtitle");
-  if (sub1) sub1.textContent = `UK-Dom · US-Dom · Australia — ${m1}, ${m2}, ${m3}`;
+  // Update Table 4 subtitle only (Table 1 subtitle is set dynamically above based on filter state)
   const sub4 = document.getElementById("vp-t4-subtitle");
   if (sub4) sub4.textContent = `${m1} · ${m2} · ${m3} — % MoM change · onboarded live + WIP`;
 }
@@ -2600,4 +2598,25 @@ document.getElementById("file-input-videos").addEventListener("change", e => {
 });
 const empty = document.getElementById("empty-state");
 ["dragenter","dragover"].forEach(ev => empty.addEventListener(ev, e => { e.preventDefault(); empty.classList.add("drop-active"); }));
-["dragleave","drop"].forEach(ev => empty.addEventListener(ev, e => { e.prev
+["dragleave","drop"].forEach(ev => empty.addEventListener(ev, e => { e.preventDefault(); empty.classList.remove("drop-active"); }));
+empty.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) ingestFile(f); });
+
+async function loadSample(){
+  document.getElementById("load-status").textContent = "Loading workbook…";
+  try {
+    let res = await fetch(SAMPLE_XLSX);
+    if (res.ok){ const buf = await res.arrayBuffer(); ingestXlsx(buf); return; }
+    res = await fetch(SAMPLE_CSV);
+    if (res.ok){ const text = await res.text(); ingestCsv(text); return; }
+    document.getElementById("load-status").textContent = "";
+    alert("No bundled workbook here — use the Upload button to load your .xlsx or .csv.");
+  } catch (e) {
+    document.getElementById("load-status").textContent = "";
+    alert("Couldn't load the bundled workbook. Use the Upload button instead.");
+  }
+}
+document.getElementById("load-sample").addEventListener("click", loadSample);
+document.getElementById("load-sample-2").addEventListener("click", loadSample);
+</script>
+</body>
+</html>
