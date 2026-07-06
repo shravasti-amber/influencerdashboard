@@ -1534,9 +1534,12 @@ function renderVpTab(){
   const normSource = s => {
     if (!s) return "";
     const val = s.toString().trim().toLowerCase();
-    if (val.includes("uk") || val.includes("united kingdom")) return "UK - Dom";
-    if (val.includes("us") || val.includes("united states") || val.includes("usa")) return "US - Dom";
-    if (val.includes("australia") || val === "aus") return "Australia";
+    // Check Australia FIRST — must come before the US check since "Australia" starts with "aus" not "us".
+    // startsWith("aus") catches: "Australia", "Australia - Dom", "Aus - Dom", "AUS", etc.
+    if (val.startsWith("aus") || val.includes("australia")) return "Australia";
+    if (val.startsWith("uk") || val.includes("united kingdom")) return "UK - Dom";
+    // Check US last — catches "US - Dom", "US", "USA", "United States"
+    if (val.startsWith("us") || val.includes("united states")) return "US - Dom";
     return s.toString().trim();
   };
 
@@ -1552,10 +1555,25 @@ function renderVpTab(){
     return false;
   }
 
-  // Use only rows matching domestic source countries from last 3 months with valid Reachout Date
-  const t1Rows = rows.filter(r => 
-    last3.includes(r.month) && 
-    DOMESTIC_SOURCES.includes(normSource(r.source)) && 
+  // Month filter: use VP tab's selected months if any are active, otherwise use ALL months in the data
+  const selectedVpMonths = [...vf.month];
+  const allDataMonths = [...new Set(allRows.map(r => r.month).filter(Boolean))].sort((a,b) => monthSortKey(a) - monthSortKey(b));
+  const t1MonthFilter = selectedVpMonths.length > 0 ? selectedVpMonths : allDataMonths;
+
+  // Update subtitle dynamically to show which months are active
+  const t1Subtitle = document.getElementById("vp-t1-subtitle");
+  if (t1Subtitle) {
+    if (selectedVpMonths.length > 0) {
+      const sortedSel = [...selectedVpMonths].sort((a,b) => monthSortKey(a) - monthSortKey(b));
+      t1Subtitle.textContent = `UK-Dom · US-Dom · Australia — ${sortedSel.join(", ")}`;
+    } else {
+      t1Subtitle.textContent = `UK-Dom · US-Dom · Australia — all months`;
+    }
+  }
+
+  const t1Rows = rows.filter(r =>
+    t1MonthFilter.includes(r.month) &&
+    DOMESTIC_SOURCES.includes(normSource(r.source)) &&
     r.reachDate !== null
   );
 
@@ -2582,25 +2600,4 @@ document.getElementById("file-input-videos").addEventListener("change", e => {
 });
 const empty = document.getElementById("empty-state");
 ["dragenter","dragover"].forEach(ev => empty.addEventListener(ev, e => { e.preventDefault(); empty.classList.add("drop-active"); }));
-["dragleave","drop"].forEach(ev => empty.addEventListener(ev, e => { e.preventDefault(); empty.classList.remove("drop-active"); }));
-empty.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) ingestFile(f); });
-
-async function loadSample(){
-  document.getElementById("load-status").textContent = "Loading workbook…";
-  try {
-    let res = await fetch(SAMPLE_XLSX);
-    if (res.ok){ const buf = await res.arrayBuffer(); ingestXlsx(buf); return; }
-    res = await fetch(SAMPLE_CSV);
-    if (res.ok){ const text = await res.text(); ingestCsv(text); return; }
-    document.getElementById("load-status").textContent = "";
-    alert("No bundled workbook here — use the Upload button to load your .xlsx or .csv.");
-  } catch (e) {
-    document.getElementById("load-status").textContent = "";
-    alert("Couldn't load the bundled workbook. Use the Upload button instead.");
-  }
-}
-document.getElementById("load-sample").addEventListener("click", loadSample);
-document.getElementById("load-sample-2").addEventListener("click", loadSample);
-</script>
-</body>
-</html>
+["dragleave","drop"].forEach(ev => empty.addEventListener(ev, e => { e.prev
