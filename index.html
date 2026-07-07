@@ -1654,16 +1654,21 @@ function renderVpTab(){
   const t2Body = document.getElementById("vp-table2-tbody");
   const t2Foot = document.getElementById("vp-table2-tfoot");
 
-  const allSources2 = [...new Set(t2Rows.map(r=>{
-    const s = r.source||"";
-    return s.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ").trim();
-  }).filter(s=>s&&s!=="—"))];
+  // Normalize source country to a proper display name
+  // Preserves abbreviations like UK and US, avoids title-casing them to "Uk"/"Us"
+  const dispSrc = s => {
+    if (!s || s === "—") return s;
+    const val = s.toString().trim().toLowerCase();
+    if (val.startsWith("aus") || val.includes("australia")) return "Australia";
+    if (val.startsWith("uk") || val.includes("united kingdom")) return "UK-Dom";
+    if (val.startsWith("us") || val.includes("united states")) return "US-Dom";
+    return s.toString().trim().split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ").trim();
+  };
+
+  const allSources2 = [...new Set(t2Rows.map(r => dispSrc(r.source)).filter(s => s && s !== "—"))];
 
   const buildT2Data = (sources) => sources.map(src => {
-    const sRows = t2Rows.filter(r => {
-      const rSrc = (r.source||"").split(" ").map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" ").trim();
-      return rSrc === src;
-    });
+    const sRows = t2Rows.filter(r => dispSrc(r.source) === src);
     const vals = STATUS_T2.map(s => sRows.filter(s.match).length);
     const grand = sRows.length;
     const onbLiveIdx = STATUS_T2.findIndex(s=>s.key==="OnbLive");
@@ -1713,35 +1718,73 @@ function renderVpTab(){
   // ── TABLE 3: Channel-wise Onboarded (VP copy) ──
   renderVpChannelOnboarded(rows);
 
-  // ── TABLE 4: Source Country MoM Onboarded Growth — April/May/June, % change only ──
-  const VP_SOURCES = ["India","Pakistan","Nepal","UK - Dom","Rest of the World","Nigeria","Zimbabwe","South Korea",
-    "Malaysia","Germany","China","Cambodia","Vietnam","US - Dom","Thailand","Singapore","Philippines","Peru",
-    "Middle East- Turkey","Middle East - Iran","Japan","Indonesia","Hong Kong","Canada","Australia"];
+  // ── TABLE 4: Source Country Onboarded MoM Growth ──
+  // Dynamic 3-month window: if filter months selected, use 3 months ending at latest selected; else last 3 in data
+
+  // Build sorted list of all months present in the full dataset (not filtered)
+  const allDataMonths4 = [...new Set(allRows.map(r => r.month).filter(Boolean))]
+    .sort((a,b) => monthSortKey(a) - monthSortKey(b));
+
+  let t4Window; // [m1, m2, m3] — oldest to newest
+  if (selectedVpMonths.length > 0) {
+    // Sort selected months and take the latest one; window = [latest-2, latest-1, latest]
+    const sortedSel4 = [...selectedVpMonths].sort((a,b) => monthSortKey(a) - monthSortKey(b));
+    const latestSel = sortedSel4[sortedSel4.length - 1];
+    const latestIdx = allDataMonths4.indexOf(latestSel);
+    t4Window = [
+      latestIdx >= 2 ? allDataMonths4[latestIdx - 2] : (allDataMonths4[0] || latestSel),
+      latestIdx >= 1 ? allDataMonths4[latestIdx - 1] : (allDataMonths4[1] || latestSel),
+      latestSel,
+    ];
+  } else {
+    // No filter: use last 3 months in the data
+    const last3data = allDataMonths4.slice(-3);
+    t4Window = [
+      last3data[0] || "",
+      last3data[1] || last3data[0] || "",
+      last3data[2] || last3data[1] || last3data[0] || "",
+    ];
+  }
+  const [m1, m2, m3] = t4Window;
+
+  // VP_SOURCES: all unique source countries from the full dataset, sorted
+  // (we use the full dataset so sources that have 0 in some months still appear)
+  const allSrc4 = [...new Set(allRows.filter(isOnb).map(r => (r.source||"").trim()).filter(s => s && s !== "—"))].sort();
 
   const t4Head = document.getElementById("vp-table4-thead");
   const t4Body = document.getElementById("vp-table4-tbody");
   const t4Foot = document.getElementById("vp-table4-tfoot");
 
-  const [m1, m2, m3] = last3; // April, May, June
-
-  const srcMonthCountFuzzy = (src, month) => {
+  // Count onboarded per source country per month, using allRows (full dataset, not filtered)
+  const srcMonthCount4 = (src, month) => {
     const sl = src.toLowerCase().replace(/\s+/g," ").trim();
-    return rows.filter(r => r.month===month && isOnb(r) &&
+    return allRows.filter(r => r.month === month && isOnb(r) &&
       (r.source||"").toLowerCase().replace(/\s+/g," ").trim() === sl).length;
   };
 
-  const sourceData4 = VP_SOURCES.map(src => {
-    const c1 = srcMonthCountFuzzy(src, m1);
-    const c2 = srcMonthCountFuzzy(src, m2);
-    const c3 = srcMonthCountFuzzy(src, m3);
-    const mom1 = mom(c2, c1);
-    const mom2 = mom(c3, c2);
-    const total = c1+c2+c3;
-    // For sorting: use total onboards as proxy for "high to low"
-    return { src, c1, c2, c3, mom1, mom2, total };
-  });
+  // Grand total onboarded per month (across ALL sources)
+  const monthGrandTotal4 = month => allRows.filter(r => r.month === month && isOnb(r)).length;
 
-  // Sort: alpha by default, desc by total onboards for "High → Low"
+  const gt1 = monthGrandTotal4(m1);
+  const gt2 = monthGrandTotal4(m2);
+  const gt3 = monthGrandTotal4(m3);
+
+  // % share: count / grand_total * 100, to 2dp (matches Excel formula B82/$B$110)
+  const sharePct = (count, grandTotal) =>
+    grandTotal > 0 ? ((count / grandTotal) * 100).toFixed(2) + "%" : "—";
+
+  const sourceData4 = allSrc4.map(src => {
+    const c1 = srcMonthCount4(src, m1);
+    const c2 = srcMonthCount4(src, m2);
+    const c3 = srcMonthCount4(src, m3);
+    const total = c1 + c2 + c3;
+    const s1 = sharePct(c1, gt1);
+    const s2 = sharePct(c2, gt2);
+    const s3 = sharePct(c3, gt3);
+    return { src, c1, c2, c3, s1, s2, s3, total };
+  }).filter(d => d.total > 0); // hide rows with no onboards across all 3 months
+
+  // Sort: alpha by default, desc by total for "High → Low"
   const sorted4 = [...sourceData4].sort((a,b) =>
     state.vpSort === "desc" ? b.total - a.total : a.src.localeCompare(b.src)
   );
@@ -1749,39 +1792,41 @@ function renderVpTab(){
   if (t4Head){
     let hCells = `<th class="px-3 py-2 text-left sticky left-0 bg-zinc-50 z-10">Source Country</th>`;
     hCells += `<th class="px-3 py-2 text-right bg-indigo-50 text-indigo-800">${escapeHtml(m1)}</th>`;
-    hCells += `<th class="px-3 py-2 text-right bg-indigo-100 text-indigo-800">→ ${escapeHtml(m2)} %</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-indigo-100 text-indigo-900 font-semibold">${escapeHtml(m1)} %</th>`;
     hCells += `<th class="px-3 py-2 text-right bg-indigo-200 text-indigo-800">${escapeHtml(m2)}</th>`;
-    hCells += `<th class="px-3 py-2 text-right bg-indigo-300 text-indigo-900">→ ${escapeHtml(m3)} %</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-indigo-300 text-indigo-900 font-semibold">${escapeHtml(m2)} %</th>`;
     hCells += `<th class="px-3 py-2 text-right bg-indigo-600 text-white">${escapeHtml(m3)}</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-indigo-700 text-white font-semibold">${escapeHtml(m3)} %</th>`;
     t4Head.innerHTML = `<tr>${hCells}</tr>`;
   }
   if (t4Body){
-    t4Body.innerHTML = sorted4.map(({src,c1,c2,c3,mom1,mom2,total}) => {
+    t4Body.innerHTML = sorted4.map(({src,c1,c2,c3,s1,s2,s3}) => {
       let cells = `<td class="px-3 py-2 font-medium sticky left-0 bg-white z-10">${escapeHtml(src)}</td>`;
       cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-50 ${c1===0?"text-zinc-300":""}">${blank(c1)}</td>`;
-      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-100 ${momColor(mom1)}">${mom1}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-100 text-indigo-800 font-medium">${c1 > 0 ? s1 : "—"}</td>`;
       cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-200 ${c2===0?"text-zinc-300":""}">${blank(c2)}</td>`;
-      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-300 ${momColor(mom2)}">${mom2}</td>`;
-      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-50 font-semibold ${c3===0?"text-zinc-300":""}">${blank(c3)}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-300 text-indigo-900 font-medium">${c2 > 0 ? s2 : "—"}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-600 text-white font-semibold ${c3===0?"opacity-40":""}">${blank(c3)}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-700 text-white font-medium">${c3 > 0 ? s3 : "—"}</td>`;
       return `<tr class="hover:bg-zinc-50">${cells}</tr>`;
     }).join("");
 
-    const tot1=sorted4.reduce((s,r)=>s+r.c1,0);
-    const tot2=sorted4.reduce((s,r)=>s+r.c2,0);
-    const tot3=sorted4.reduce((s,r)=>s+r.c3,0);
-    const totMom1 = mom(tot2,tot1), totMom2 = mom(tot3,tot2);
+    const tot1 = sorted4.reduce((s,r)=>s+r.c1,0);
+    const tot2 = sorted4.reduce((s,r)=>s+r.c2,0);
+    const tot3 = sorted4.reduce((s,r)=>s+r.c3,0);
     let fCells4 = `<td class="px-3 py-2 font-bold sticky left-0 bg-zinc-50 z-10">Grand Total</td>`;
     fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-50">${tot1||""}</td>`;
-    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-100 ${momColor(totMom1)}">${totMom1}</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-100 text-indigo-800">100.00%</td>`;
     fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-200">${tot2||""}</td>`;
-    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-300 ${momColor(totMom2)}">${totMom2}</td>`;
-    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-50">${tot3||""}</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-300 text-indigo-900">100.00%</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-600 text-white">${tot3||""}</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-700 text-white">100.00%</td>`;
     if (t4Foot) t4Foot.innerHTML = `<tr class="border-t-2 border-zinc-300">${fCells4}</tr>`;
   }
 
-  // Update Table 4 subtitle only (Table 1 subtitle is set dynamically above based on filter state)
+  // Update Table 4 subtitle
   const sub4 = document.getElementById("vp-t4-subtitle");
-  if (sub4) sub4.textContent = `${m1} · ${m2} · ${m3} — % MoM change · onboarded live + WIP`;
+  if (sub4) sub4.textContent = `${m1} · ${m2} · ${m3} — % share of monthly onboards · live + WIP`;
 }
 
 function renderVpChannelOnboarded(rows){
