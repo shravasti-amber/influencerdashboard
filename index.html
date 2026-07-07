@@ -111,7 +111,7 @@
       </div>
     </section>
 
-    <section id="kpi-row-prospects" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3"></section>
+    <section id="kpi-row-prospects" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3"></section>
 
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
       <!-- Section 1 — Pipeline Health -->
@@ -1836,9 +1836,10 @@ function renderVpChannelOnboarded(rows){
   if (!tbody) return;
 
   const isOnb = r => r.status === "Onboarded — Live" || r.status === "Onboarding WIP";
-
-  // Determine current & previous months from VP filter (or fall back to last 2 in data)
-  const allMonthsSorted = [...new Set(rows.map(r=>r.month).filter(Boolean))].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
+  // Use the FULL dataset to find all available months, so previous month is
+  // always reachable even when a filter narrows rows to a single month
+  const allRows = state.datasets.prospects;
+  const allMonthsSorted = [...new Set(allRows.map(r=>r.month).filter(Boolean))].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
   const vpMonthsSel = [...state.filters.vp.month].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
   let curMonth, prevMonth;
   if (vpMonthsSel.length >= 1) {
@@ -1858,10 +1859,10 @@ function renderVpChannelOnboarded(rows){
     tbody.innerHTML = platCounts.map(([p,n])=>`<tr class="hover:bg-zinc-50"><td class="px-3 py-2">${escapeHtml(p)}</td><td class="px-3 py-2 text-right tabular-nums font-medium">${n}</td></tr>`).join("");
     if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300"><td class="px-3 py-2">Grand Total</td><td class="px-3 py-2 text-right tabular-nums font-bold">${grand}</td></tr>`;
   } else {
-    // MoM% — current month vs previous month, filter-aware
-    if (thead) thead.innerHTML = `<tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">${escapeHtml(prevMonth||"Prev")}</th><th class="px-3 py-2 text-right">${escapeHtml(curMonth||"Current")}</th><th class="px-3 py-2 text-right">MoM %</th></tr>`;
-    const prevOnb = rows.filter(r => r.month===prevMonth && isOnb(r));
-    const curOnb  = rows.filter(r => r.month===curMonth  && isOnb(r));
+    // MoM% — pull BOTH months from the full dataset so prev month data is never empty
+    if (thead) thead.innerHTML = `<tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">${escapeHtml(prevMonth||"—")}</th><th class="px-3 py-2 text-right">${escapeHtml(curMonth||"Current")}</th><th class="px-3 py-2 text-right">MoM %</th></tr>`;
+    const prevOnb = allRows.filter(r => r.month===prevMonth && isOnb(r));
+    const curOnb  = allRows.filter(r => r.month===curMonth  && isOnb(r));
     const prevMap = new Map(counts(prevOnb,"platform"));
     const curMap  = new Map(counts(curOnb,"platform"));
     const plats = [...new Set([...prevMap.keys(),...curMap.keys()])].sort();
