@@ -368,9 +368,10 @@
       </div>
 
       <!-- Table 3: Channel-wise Onboarded (mirrored from Prospects tab) -->
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 max-w-lg">
+      <!-- Table 3: Platform VS Reachout & Onboarding -->
+      <div class="bg-white rounded-xl border border-zinc-200 p-4">
         <div class="flex items-center justify-between mb-3">
-          <h3 class="font-semibold text-sm">Channel-wise Onboarded</h3>
+          <h3 class="font-semibold text-sm">Platform VS Reachout &amp; Onboarding</h3>
           <div class="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
             <button id="vp-ch-onb-count" class="px-2.5 py-1 bg-indigo-600 text-white font-medium" onclick="setVpChannelView('count')">Count</button>
             <button id="vp-ch-onb-mom" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setVpChannelView('mom')">MoM %</button>
@@ -984,13 +985,11 @@ function renderProspectKPIs(rows){
   const onb = rows.filter(r => r.status === "Onboarded — Live").length;
   const wip = rows.filter(r => r.status === "Onboarding WIP").length;
   const lost = rows.filter(r => r.status === "Lost").length;
-  const fu = rows.filter(r => r.status.startsWith("Follow up")).length;
   const conv = total ? ((onb+wip)/total)*100 : 0;
   const uniq = new Set(rows.map(r => (r.partner||"").toLowerCase()).filter(Boolean)).size;
   const kpis = [
     { label:"Total prospects", value: total.toLocaleString(), sub:`${uniq.toLocaleString()} unique influencers` },
-    { label:"Onboarded · Live", value: onb.toLocaleString(), sub:`confirmed onboards`, color:"text-emerald-600" },
-    { label:"Onboarding WIP", value: wip.toLocaleString(), sub:`in progress`, color:"text-teal-600" },
+    { label:"Onboarded", value: (onb+wip).toLocaleString(), sub:`${onb} Live + ${wip} WIP`, color:"text-emerald-600" },
     { label:"Conversion rate", value: conv.toFixed(1)+"%", sub:"(onboarded + WIP) / total" },
     { label:"Lost", value: lost.toLocaleString(), sub: total ? ((lost/total)*100).toFixed(1)+"%" : "", color:"text-rose-600" },
     { label:"POCs active", value: new Set(rows.map(r=>r.poc)).size, sub:"team members" },
@@ -1791,23 +1790,23 @@ function renderVpTab(){
 
   if (t4Head){
     let hCells = `<th class="px-3 py-2 text-left sticky left-0 bg-zinc-50 z-10">Source Country</th>`;
-    hCells += `<th class="px-3 py-2 text-right bg-indigo-50 text-indigo-800">${escapeHtml(m1)}</th>`;
-    hCells += `<th class="px-3 py-2 text-right bg-indigo-100 text-indigo-900 font-semibold">${escapeHtml(m1)} %</th>`;
-    hCells += `<th class="px-3 py-2 text-right bg-indigo-200 text-indigo-800">${escapeHtml(m2)}</th>`;
-    hCells += `<th class="px-3 py-2 text-right bg-indigo-300 text-indigo-900 font-semibold">${escapeHtml(m2)} %</th>`;
-    hCells += `<th class="px-3 py-2 text-right bg-indigo-600 text-white">${escapeHtml(m3)}</th>`;
-    hCells += `<th class="px-3 py-2 text-right bg-indigo-700 text-white font-semibold">${escapeHtml(m3)} %</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-sky-50 text-sky-800">${escapeHtml(m1)}</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-sky-100 text-sky-900 font-semibold">${escapeHtml(m1)} %</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-sky-200 text-sky-800">${escapeHtml(m2)}</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-sky-300 text-sky-900 font-semibold">${escapeHtml(m2)} %</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-sky-500 text-white">${escapeHtml(m3)}</th>`;
+    hCells += `<th class="px-3 py-2 text-right bg-sky-600 text-white font-semibold">${escapeHtml(m3)} %</th>`;
     t4Head.innerHTML = `<tr>${hCells}</tr>`;
   }
   if (t4Body){
     t4Body.innerHTML = sorted4.map(({src,c1,c2,c3,s1,s2,s3}) => {
       let cells = `<td class="px-3 py-2 font-medium sticky left-0 bg-white z-10">${escapeHtml(src)}</td>`;
-      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-50 ${c1===0?"text-zinc-300":""}">${blank(c1)}</td>`;
-      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-100 text-indigo-800 font-medium">${c1 > 0 ? s1 : "—"}</td>`;
-      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-200 ${c2===0?"text-zinc-300":""}">${blank(c2)}</td>`;
-      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-300 text-indigo-900 font-medium">${c2 > 0 ? s2 : "—"}</td>`;
-      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-600 text-white font-semibold ${c3===0?"opacity-40":""}">${blank(c3)}</td>`;
-      cells += `<td class="px-3 py-2 text-right tabular-nums bg-indigo-700 text-white font-medium">${c3 > 0 ? s3 : "—"}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-sky-50 ${c1===0?"text-zinc-300":""}"><b>${blank(c1)}</b></td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-sky-100 text-sky-800 font-medium">${c1 > 0 ? s1 : "0.00%"}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-sky-200 ${c2===0?"text-zinc-400":""}"><b>${blank(c2)}</b></td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-sky-300 text-sky-900 font-medium">${c2 > 0 ? s2 : "0.00%"}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-sky-500 text-white font-semibold ${c3===0?"opacity-60":""}" ><b>${blank(c3)}</b></td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-sky-600 text-white font-medium">${c3 > 0 ? s3 : "0.00%"}</td>`;
       return `<tr class="hover:bg-zinc-50">${cells}</tr>`;
     }).join("");
 
@@ -1815,12 +1814,12 @@ function renderVpTab(){
     const tot2 = sorted4.reduce((s,r)=>s+r.c2,0);
     const tot3 = sorted4.reduce((s,r)=>s+r.c3,0);
     let fCells4 = `<td class="px-3 py-2 font-bold sticky left-0 bg-zinc-50 z-10">Grand Total</td>`;
-    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-50">${tot1||""}</td>`;
-    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-100 text-indigo-800">100.00%</td>`;
-    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-200">${tot2||""}</td>`;
-    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-300 text-indigo-900">100.00%</td>`;
-    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-600 text-white">${tot3||""}</td>`;
-    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-indigo-700 text-white">100.00%</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-sky-50">${tot1||""}</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-sky-100 text-sky-800">100.00%</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-sky-200">${tot2||""}</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-sky-300 text-sky-900">100.00%</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-sky-500 text-white">${tot3||""}</td>`;
+    fCells4 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-sky-600 text-white">100.00%</td>`;
     if (t4Foot) t4Foot.innerHTML = `<tr class="border-t-2 border-zinc-300">${fCells4}</tr>`;
   }
 
@@ -1830,14 +1829,26 @@ function renderVpTab(){
 }
 
 function renderVpChannelOnboarded(rows){
+  // 'rows' here is the VP-filter-applied rows (from renderVpTab)
   const tbody = document.getElementById("vp-ch-onb-tbody");
   const tfoot = document.getElementById("vp-ch-onb-tfoot");
   const thead = document.getElementById("vp-ch-onb-thead");
   if (!tbody) return;
 
   const isOnb = r => r.status === "Onboarded — Live" || r.status === "Onboarding WIP";
-  const last3 = getLastThreeMonths();
+
+  // Determine current & previous months from VP filter (or fall back to last 2 in data)
   const allMonthsSorted = [...new Set(rows.map(r=>r.month).filter(Boolean))].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
+  const vpMonthsSel = [...state.filters.vp.month].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
+  let curMonth, prevMonth;
+  if (vpMonthsSel.length >= 1) {
+    curMonth  = vpMonthsSel[vpMonthsSel.length - 1];
+    const idx = allMonthsSorted.indexOf(curMonth);
+    prevMonth = idx > 0 ? allMonthsSorted[idx - 1] : null;
+  } else {
+    curMonth  = allMonthsSorted[allMonthsSorted.length - 1] || null;
+    prevMonth = allMonthsSorted.length >= 2 ? allMonthsSorted[allMonthsSorted.length - 2] : null;
+  }
 
   if (state.vpChannelView === "count"){
     if (thead) thead.innerHTML = `<tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">Onboarded</th></tr>`;
@@ -1847,11 +1858,10 @@ function renderVpChannelOnboarded(rows){
     tbody.innerHTML = platCounts.map(([p,n])=>`<tr class="hover:bg-zinc-50"><td class="px-3 py-2">${escapeHtml(p)}</td><td class="px-3 py-2 text-right tabular-nums font-medium">${n}</td></tr>`).join("");
     if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300"><td class="px-3 py-2">Grand Total</td><td class="px-3 py-2 text-right tabular-nums font-bold">${grand}</td></tr>`;
   } else {
-    // MoM% — compare last two of last 3 months
-    const [,m2,m3] = last3;
-    if (thead) thead.innerHTML = `<tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">${escapeHtml(m2)}</th><th class="px-3 py-2 text-right">${escapeHtml(m3)}</th><th class="px-3 py-2 text-right">MoM %</th></tr>`;
-    const prevOnb = rows.filter(r => r.month===m2 && isOnb(r));
-    const curOnb  = rows.filter(r => r.month===m3 && isOnb(r));
+    // MoM% — current month vs previous month, filter-aware
+    if (thead) thead.innerHTML = `<tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">${escapeHtml(prevMonth||"Prev")}</th><th class="px-3 py-2 text-right">${escapeHtml(curMonth||"Current")}</th><th class="px-3 py-2 text-right">MoM %</th></tr>`;
+    const prevOnb = rows.filter(r => r.month===prevMonth && isOnb(r));
+    const curOnb  = rows.filter(r => r.month===curMonth  && isOnb(r));
     const prevMap = new Map(counts(prevOnb,"platform"));
     const curMap  = new Map(counts(curOnb,"platform"));
     const plats = [...new Set([...prevMap.keys(),...curMap.keys()])].sort();
