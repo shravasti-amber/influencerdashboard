@@ -153,6 +153,10 @@
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-semibold text-sm">Source → onboarded</h3>
           <div class="flex gap-2">
+            <div class="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
+              <button id="src-onb-sort-default" class="px-2.5 py-1 bg-indigo-600 text-white font-medium" onclick="setSrcOnbSort('default')">High → Low</button>
+              <button id="src-onb-sort-alpha" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setSrcOnbSort('alpha')">A → Z</button>
+            </div>
             <button id="toggle-source-view" class="text-xs px-3 py-1 rounded border border-zinc-300 bg-white hover:bg-zinc-100" data-view="country">By Country</button>
             <button id="toggle-region-view" class="text-xs px-3 py-1 rounded border border-zinc-300 bg-indigo-600 text-white hover:bg-indigo-700" data-view="region">By Region</button>
           </div>
@@ -166,7 +170,7 @@
                 <th class="px-3 py-2 text-right">WIP</th>
                 <th class="px-3 py-2 text-right">In Pipeline</th>
                 <th class="px-3 py-2 text-right">Lost</th>
-                <th class="px-3 py-2 text-right font-semibold text-zinc-700">Total</th>
+                <th id="src-onb-total-th" class="px-3 py-2 text-right font-semibold text-zinc-700 cursor-pointer select-none hover:bg-indigo-50 hover:text-indigo-700" onclick="setSrcOnbSort(state.srcOnbSort==='default'?'alpha':'default')" title="Click to toggle sort">Total ⇅</th>
                 <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">Conv %</th>
               </tr>
             </thead>
@@ -190,6 +194,10 @@
           </div>
           <div class="flex items-center gap-2 flex-wrap justify-end">
             <span id="poc-breakdown-warning" class="hidden text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-3 py-1.5">Select a single month for weekly view</span>
+            <div class="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
+              <button id="poc-bd-sort-alpha" class="px-2.5 py-1 bg-indigo-600 text-white font-medium" onclick="setPocBdSort('alpha')">A → Z</button>
+              <button id="poc-bd-sort-grand" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setPocBdSort('grand')">High → Low</button>
+            </div>
             <div id="poc-week-toggles" class="flex flex-wrap gap-1.5"></div>
           </div>
         </div>
@@ -1166,11 +1174,19 @@ function renderProspectCharts(rows){
         pipe: sub.filter(r=>r.status.startsWith("Follow up")||r.status==="Replied"||r.status==="In talks"||r.status==="High ask"||r.status==="Contacted").length,
         lost: sub.filter(r=>r.status==="Lost").length,
       };
-    }).filter(s=>s.total >= 5).sort((a,b)=>b.onb-a.onb||b.total-a.total).slice(0,20);
+    }).filter(s=>s.total >= 5);
+    // Sort: high-to-low by total (default), or alphabetical
+    if (state.srcOnbSort === "alpha") {
+      sourceAgg.sort((a,b)=>a.label.localeCompare(b.label));
+    } else {
+      sourceAgg.sort((a,b)=>b.onb-a.onb||b.total-a.total);
+    }
+    sourceAgg = sourceAgg.slice(0,20);
 
     const blank = n => n === 0 ? "" : n;
     tbody.innerHTML = sourceAgg.map(s => {
-      const conv = s.total ? ((s.onb/s.total)*100).toFixed(1)+"%" : "—";
+      // Conversion rate = (Onboarded Live + WIP) / Total
+      const conv = s.total ? (((s.onb + s.wip)/s.total)*100).toFixed(1)+"%" : "—";
       return `<tr class="hover:bg-zinc-50">
         <td class="px-3 py-2 font-medium">${escapeHtml(s.label)}</td>
         <td class="px-3 py-2 text-right tabular-nums text-emerald-700 font-medium">${blank(s.onb)}</td>
@@ -1187,7 +1203,8 @@ function renderProspectCharts(rows){
     const totPipe = sourceAgg.reduce((s,r)=>s+r.pipe,0);
     const totLost = sourceAgg.reduce((s,r)=>s+r.lost,0);
     const totAll  = sourceAgg.reduce((s,r)=>s+r.total,0);
-    const totConv = totAll ? ((totOnb/totAll)*100).toFixed(1)+"%" : "—";
+    // Grand total conv = (all onb live + all WIP) / total
+    const totConv = totAll ? (((totOnb+totWip)/totAll)*100).toFixed(1)+"%" : "—";
     if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
       <td class="px-3 py-2 font-bold">Grand Total</td>
       <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">${totOnb||""}</td>
@@ -1198,8 +1215,23 @@ function renderProspectCharts(rows){
       <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${totConv}</td>
     </tr>`;
   };
+  // Source → onboarded sort state
+  if (!state.srcOnbSort) state.srcOnbSort = "default";
+
+  // Helper to update sort button styles
+  const updateSrcSortBtns = () => {
+    const def = document.getElementById("src-onb-sort-default");
+    const alp = document.getElementById("src-onb-sort-alpha");
+    if (def) def.className = state.srcOnbSort !== "alpha" ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
+    if (alp) alp.className = state.srcOnbSort === "alpha" ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
+    const th = document.getElementById("src-onb-total-th");
+    if (th) th.textContent = `Total ${state.srcOnbSort !== "alpha" ? "▼" : "⇅"}`;
+  };
+
+  window.setSrcOnbSort = (mode) => { state.srcOnbSort = mode; updateSrcSortBtns(); renderSourceOnboardChart(); };
   state._renderSourceOnboard = renderSourceOnboardChart;
   renderSourceOnboardChart();
+  updateSrcSortBtns();
   // MoM — grouped bar: this month vs last month, side by side per metric
   const allMonthsSorted = [...new Set(rows.map(r=>r.month).filter(Boolean))].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
   const lastTwo = allMonthsSorted.slice(-2);
@@ -1228,11 +1260,11 @@ function renderProspectCharts(rows){
   });
 
   // Weekly progress — role-aware, complete-row rule
+  // From July 2026: updated roster
   const ROLES = {
-    "Ishika":"Intern","Aashray":"Intern","Aarya":"Intern","Shravasti":"Intern",
-    "Akksheda":"Intern","Divyanshu":"Intern","Ishita":"Intern","Pratiksha":"Intern",
-    "Pooja":"Intern","Shravani":"Intern","Devansh":"Intern","Anisha":"Intern","Janhavi":"Intern",
-    "Deeksha":"Full-time","Abhishek":"Full-time","Kaamil":"Full-time",
+    "Akksheda":"Intern","Ishita":"Intern","Pooja":"Intern","Devansh":"Intern",
+    "Shravani":"Intern","Anisha":"Intern","Janhavi":"Intern",
+    "Abhishek":"Full-time","Deeksha":"Full-time","Ishika":"Full-time","Shravasti":"Full-time",
     "Royce":"Assoc. Manager","Palash":"Manager",
   };
   const REQUIRED_FIELDS = ["poc","month","reachDate","region","source","destination","partner","channel","subscribers","platform","status"];
@@ -1361,6 +1393,11 @@ function renderProspectCharts(rows){
 // ============================================================
 // VP WEEKLY MEETING METRICS TAB
 // ============================================================
+
+function setPocBdSort(mode){
+  state.pocBdSort = mode;
+  if (state._pocBreakdownRows) renderPocBreakdownTable(state._pocBreakdownRows);
+}
 
 function getLastThreeMonths(){
   // Returns ["April 2026","May 2026","June 2026"] style — always last 3 calendar months
@@ -2059,19 +2096,36 @@ function renderPocBreakdownTable(rows){
     return; // weekly view rendered — done
   }
 
-  // ── DEFAULT VIEW (all statuses) ──
+  // Sort POC rows: alphabetical (default) or high-to-low by Grand Total
+  if (!state.pocBdSort) state.pocBdSort = "alpha";
+  const pocNamesSorted = state.pocBdSort === "grand"
+    ? [...pocNames].sort((a,b) => {
+        const ga = rows.filter(r=>r.poc===a).length;
+        const gb = rows.filter(r=>r.poc===b).length;
+        return gb - ga || a.localeCompare(b);
+      })
+    : pocNames; // already alphabetical
+
+  const grandActive = state.pocBdSort === "grand";
+  const grandThCls = `px-3 py-2 text-right font-semibold text-zinc-700 cursor-pointer select-none hover:bg-indigo-50 hover:text-indigo-700${grandActive ? " bg-indigo-100 text-indigo-700" : ""}`;
   let headerCells = `<th class="px-3 py-2 text-left sticky left-0 bg-zinc-50 z-10">POC</th>`;
   STATUS_COLS.forEach(col => {
     headerCells += `<th class="px-3 py-2 text-right">${escapeHtml(col.label)}</th>`;
   });
-  headerCells += `<th class="px-3 py-2 text-right font-semibold text-zinc-700">Grand Total</th>`;
+  headerCells += `<th class="${grandThCls}" onclick="setPocBdSort(state.pocBdSort==='grand'?'alpha':'grand')" title="Click to sort high to low">Grand Total ${grandActive ? "▼" : "⇅"}</th>`;
   headerCells += `<th class="px-3 py-2 text-right bg-yellow-50 text-yellow-700 font-semibold">Response Rate</th>`;
   if (thead) thead.innerHTML = `<tr>${headerCells}</tr>`;
+
+  // Update sort button styles
+  const pocAlphaBtn = document.getElementById("poc-bd-sort-alpha");
+  const pocGrandBtn = document.getElementById("poc-bd-sort-grand");
+  if (pocAlphaBtn) pocAlphaBtn.className = state.pocBdSort !== "grand" ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
+  if (pocGrandBtn) pocGrandBtn.className = state.pocBdSort === "grand" ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
 
   const colTotals = new Array(STATUS_COLS.length).fill(0);
   let grandTotalAll = 0;
 
-  tbody.innerHTML = pocNames.map((poc, rowIdx) => {
+  tbody.innerHTML = pocNamesSorted.map((poc, rowIdx) => {
     const pocRows = rows.filter(r => r.poc === poc);
     const vals = STATUS_COLS.map(c => pocRows.filter(c.match).length);
     vals.forEach((n,i) => colTotals[i] += n);
@@ -2083,7 +2137,7 @@ function renderPocBreakdownTable(rows){
     const zebraBase = rowIdx%2===0 ? "bg-white" : "bg-zinc-50/80";
     let cells = `<td class="px-3 py-2 font-medium sticky left-0 ${zebraBase} z-10">${escapeHtml(poc)}</td>`;
     vals.forEach(n => {
-      cells += `<td class="px-3 py-2 text-right tabular-nums ${n===0?"text-zinc-200":""}">${blank(n)}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums ${n===0?"text-zinc-200":""}"> ${blank(n)}</td>`;
     });
     cells += `<td class="px-3 py-2 text-right tabular-nums font-semibold">${grand}</td>`;
     cells += `<td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700 font-medium">${responseRate}</td>`;
@@ -2405,22 +2459,22 @@ function renderVideoProgress(rows){
     { label:"Week 4", start:new Date(year,mIdx,24,0,0,0,0), end:new Date(year,mIdx,lastDay,23,59,59,999) },
   ];
 
-  // Defined display order for the bar chart
-  const POC_ORDER = ["Royce","Abhishek","Kaamil","Deeksha","Ishika","Aashray","Aarya","Shravasti","Akksheda","Divyanshu","Ishita","Pratiksha","Pooja","Shravani","Devansh","Anisha","Janhavi"];
+  // Defined display order (from July 2026: updated roster)
+  const POC_ORDER = ["Royce","Abhishek","Deeksha","Ishika","Shravasti","Akksheda","Ishita","Pooja","Shravani","Devansh","Anisha","Janhavi"];
 
-  // Role targets
+  // Role targets (from July 2026: FTEs=32, Royce=26, Interns=20)
   const VIDEO_TARGETS = {
-    "Intern":20, "Full-time":30, "Assoc. Manager":30, "Manager":null,
+    "Intern":20, "Full-time":32, "Assoc. Manager":26, "Manager":null,
   };
   // Per-POC monthly overrides: { "Name": { "Month YYYY": target } }
   const VIDEO_TARGET_OVERRIDES = {
     "Shravasti": { "June 2026": 25 },
   };
   const ROLES = {
-    "Ishika":"Intern","Aashray":"Intern","Aarya":"Intern","Shravasti":"Intern",
-    "Akksheda":"Intern","Divyanshu":"Intern","Ishita":"Intern","Pratiksha":"Intern",
-    "Pooja":"Intern","Shravani":"Intern","Devansh":"Intern","Anisha":"Intern","Janhavi":"Intern",
-    "Deeksha":"Full-time","Abhishek":"Full-time","Kaamil":"Full-time",
+    // From July 2026: updated roster
+    "Akksheda":"Intern","Ishita":"Intern","Pooja":"Intern","Devansh":"Intern",
+    "Shravani":"Intern","Anisha":"Intern","Janhavi":"Intern",
+    "Abhishek":"Full-time","Deeksha":"Full-time","Ishika":"Full-time","Shravasti":"Full-time",
     "Royce":"Assoc. Manager","Palash":"Manager",
   };
 
