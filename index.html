@@ -468,6 +468,38 @@ const EXCLUDED_POCS = new Set(["Mehak","Tanisha"]);
 const TARGET_REACHOUTS = 120;
 const TARGET_ONBOARDS = 4;
 
+// Canonical 8-region mapping (source country → region label).
+// Tagging started February 2026; rows before that date get no region.
+const REGION_CUTOFF = new Date(2026, 1, 1).getTime(); // Feb 1 2026
+const SOURCE_REGION_MAP = (() => {
+  const m = {};
+  const add = (region, ...countries) => countries.forEach(c => { m[c.toLowerCase()] = region; });
+  add("AUS", "Australia", "New Zealand");
+  add("EMEA",
+    "Nigeria","Spain","Germany",
+    "Middle East - Saudi Arabia","Middle East - Iran","Middle East - Kuwait",
+    "Middle East - Lebanon","Middle East - Syria","Middle East - Turkey",
+    "Morocco","Algeria","Austria","Brazil","Canada","Italy",
+    "Mexico","Peru","Romania","Russia","Tunisia");
+  add("India", "India");
+  add("SEA",
+    "Malaysia","Hong Kong","Indonesia","Japan",
+    "Phillipines","Philippines","Singapore","South Korea",
+    "Taiwan","Thailand","Vietnam");
+  add("Subcontinent", "Bangladesh","China","Nepal","Pakistan","Sri Lanka");
+  add("UK", "UK","United Kingdom","Uk");
+  add("USA", "USA","United States","Us","U.S.","U.S.A.");
+  return m;
+})();
+const CANONICAL_REGIONS = new Set(["AUS","EMEA","India","SEA","Subcontinent","UK","USA","Other"]);
+function deriveRegion(sourceCountry, reachDate) {
+  // No region for rows before Feb 2026
+  if (!reachDate || reachDate.getTime() < REGION_CUTOFF) return "";
+  const key = norm(sourceCountry).toLowerCase();
+  if (!key || key === "—") return "Other";
+  return SOURCE_REGION_MAP[key] || "Other";
+}
+
 const MONTH_NUM = { january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11 };
 function norm(v){return (v??"").toString().trim();}
 function titleCase(s){return s.toLowerCase().replace(/\b\w/g, c=>c.toUpperCase());}
@@ -628,7 +660,7 @@ function normalizeProspect(r){
     poc: poc ? titleCase(poc) : "—",
     month, monthSort: monthSortKey(month),
     reachDate,
-    region: norm(getCell(r,"Region by Source Country")) || "—",
+    region: deriveRegion(norm(getCell(r,"Source Country")), reachDate),
     source: norm(getCell(r,"Source Country")) || "—",
     destination: dest || "—",
     partner, channel: norm(getCell(r,"Channel link")),
@@ -939,7 +971,15 @@ function buildProspectFilters(){
   // Filter out months before January 2026 from the month dropdown
   const JAN_2026 = new Date(2026, 0, 1).getTime();
   const prospectsFrom2026 = state.datasets.prospects.filter(r => monthSortKey(r.month) >= JAN_2026);
-  buildFilters("filters-prospects", prospectsFrom2026, PROSPECT_FILTERS, applyProspectFilters);
+  // For the region filter, only source options from Feb 2026+ rows (when tagging began)
+  const prospectsWithRegion = state.datasets.prospects.filter(r => r.region && CANONICAL_REGIONS.has(r.region));
+  // Temporarily override the region filter's dataset by patching values
+  const filterDataset = prospectsFrom2026.map(r => ({
+    ...r,
+    // Only surface a region value if it's a canonical one (hides blank pre-Feb rows)
+    region: CANONICAL_REGIONS.has(r.region) ? r.region : undefined,
+  }));
+  buildFilters("filters-prospects", filterDataset, PROSPECT_FILTERS, applyProspectFilters);
 }
 
 function applyProspectFilters(){
@@ -950,7 +990,11 @@ function applyProspectFilters(){
     if (f.platform.size && !f.platform.has(r.platform)) return false;
     if (f.destination.size && !f.destination.has(r.destination)) return false;
     if (f.source.size && !f.source.has(r.source)) return false;
-    if (f.region.size && !f.region.has(r.region)) return false;
+    // Region filter only applies to Feb-2026+ rows; pre-Feb rows are excluded when a region is selected
+    if (f.region.size) {
+      if (!r.region || !CANONICAL_REGIONS.has(r.region)) return false;
+      if (!f.region.has(r.region)) return false;
+    }
     if (f.status.size && !f.status.has(r.status)) return false;
     if (f.search){ const q=f.search.toLowerCase(); const hay=`${r.partner} ${r.email} ${r.source} ${r.destination} ${r.poc}`.toLowerCase(); if (!hay.includes(q)) return false; }
     return true;
@@ -1203,9 +1247,15 @@ function renderProspectCharts(rows){
 
     let sourceAgg;
     const groupKey = state.sourceView === "region" ? "region" : "source";
-    const keys = [...new Set(rows.map(r=>r[groupKey]).filter(v => v && v !== "—"))];
+    // In region view, scope to Feb 2026+ rows only (before that, source countries weren't tagged to regions)
+    const viewRows = state.sourceView === "region"
+      ? rows.filter(r => r.region && CANONICAL_REGIONS.has(r.region))
+      : rows;
+    const keys = state.sourceView === "region"
+      ? [...CANONICAL_REGIONS]  // always show all 8 regions in a fixed order
+      : [...new Set(viewRows.map(r=>r[groupKey]).filter(v => v && v !== "—"))];
     sourceAgg = keys.map(s => {
-      const sub = rows.filter(r=>r[groupKey]===s);
+      const sub = viewRows.filter(r=>r[groupKey]===s);
       return {
         label:s, total:sub.length,
         onb:  sub.filter(r=>r.status==="Onboarded — Live").length,
@@ -1213,7 +1263,9 @@ function renderProspectCharts(rows){
         pipe: sub.filter(r=>r.status.startsWith("Follow up")||r.status==="Replied"||r.status==="In talks"||r.status==="High ask"||r.status==="Contacted").length,
         lost: sub.filter(r=>r.status==="Lost").length,
       };
-    }).filter(s=>s.total >= 5);
+    // In region view, always show all 8 canonical regions (even if few rows).
+    // In country view, keep the >=5 threshold to avoid clutter.
+    }).filter(s => state.sourceView === \"region\" || s.total >= 5);
     // Sort: high-to-low by total (default), or alphabetical
     if (state.srcOnbSort === "alpha") {
       sourceAgg.sort((a,b)=>a.label.localeCompare(b.label));
