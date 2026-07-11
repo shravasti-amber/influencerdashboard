@@ -153,10 +153,7 @@
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-semibold text-sm">Source → onboarded</h3>
           <div class="flex gap-2">
-            <div class="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
-              <button id="src-onb-sort-default" class="px-2.5 py-1 bg-indigo-600 text-white font-medium" onclick="setSrcOnbSort('default')">High → Low</button>
-              <button id="src-onb-sort-alpha" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setSrcOnbSort('alpha')">A → Z</button>
-            </div>
+
             <button id="toggle-source-view" class="text-xs px-3 py-1 rounded border border-zinc-300 bg-white hover:bg-zinc-100" data-view="country">By Country</button>
             <button id="toggle-region-view" class="text-xs px-3 py-1 rounded border border-zinc-300 bg-indigo-600 text-white hover:bg-indigo-700" data-view="region">By Region</button>
           </div>
@@ -170,7 +167,7 @@
                 <th class="px-3 py-2 text-right">WIP</th>
                 <th class="px-3 py-2 text-right">In Pipeline</th>
                 <th class="px-3 py-2 text-right">Lost</th>
-                <th id="src-onb-total-th" class="px-3 py-2 text-right font-semibold text-zinc-700 cursor-pointer select-none hover:bg-indigo-50 hover:text-indigo-700" onclick="setSrcOnbSort(state.srcOnbSort==='default'?'alpha':'default')" title="Click to toggle sort">Total ⇅</th>
+                <th id="src-onb-total-th" class="px-3 py-2 text-right font-semibold text-zinc-700 select-none">Total ↓</th>
                 <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">Conv %</th>
               </tr>
             </thead>
@@ -492,9 +489,9 @@ const SOURCE_REGION_MAP = (() => {
   return m;
 })();
 const CANONICAL_REGIONS = new Set(["AUS","EMEA","India","SEA","Subcontinent","UK","USA","Other"]);
-function deriveRegion(sourceCountry, reachDate) {
+function deriveRegion(sourceCountry, monthSort) {
   // No region for rows before Feb 2026
-  if (!reachDate || reachDate.getTime() < REGION_CUTOFF) return "";
+  if (monthSort < REGION_CUTOFF) return "";
   const key = norm(sourceCountry).toLowerCase();
   if (!key || key === "—") return "Other";
   return SOURCE_REGION_MAP[key] || "Other";
@@ -640,6 +637,7 @@ function normalizeProspect(r){
   const dest = mapVal(getCell(r,"Destination"), DEST_MAP, "");
   const reachDate = parseDate(getCell(r,"Reachout date  (for new onboards )","Reachout date","Reach out date"));
   const month = deriveMonth(getCell(r,"Month"), reachDate);
+  const mSort = monthSortKey(month);
   const subRaw = norm(getCell(r,"Subscriber","Subscribers","Subs/Followers"));
   let subscribers = 0;
   if (subRaw) {
@@ -658,9 +656,9 @@ function normalizeProspect(r){
   }
   return {
     poc: poc ? titleCase(poc) : "—",
-    month, monthSort: monthSortKey(month),
+    month, monthSort: mSort,
     reachDate,
-    region: deriveRegion(norm(getCell(r,"Source Country")), reachDate),
+    region: deriveRegion(norm(getCell(r,"Source Country")), mSort),
     source: norm(getCell(r,"Source Country")) || "—",
     destination: dest || "—",
     partner, channel: norm(getCell(r,"Channel link")),
@@ -840,7 +838,7 @@ function buildFilters(hostId, dataset, filterMap, onChange){
   const host = document.getElementById(hostId);
   host.innerHTML = "";
   for (const [key, conf] of Object.entries(filterMap)){
-    const values = [...new Set(dataset.map(r => r[conf.field]).filter(Boolean))].sort(conf.sort || ((a,b) => a.localeCompare(b)));
+    const values = conf.options || [...new Set(dataset.map(r => r[conf.field]).filter(Boolean))].sort(conf.sort || ((a,b) => a.localeCompare(b)));
     const wrap = document.createElement("div");
     wrap.className = "multiselect";
     wrap.innerHTML = `
@@ -962,7 +960,7 @@ const PROSPECT_FILTERS = {
   platform:   { label:"Platform", field:"platform", set:null },
   destination:{ label:"Destination Country", field:"destination", set:null },
   source:     { label:"Source Country", field:"source", set:null },
-  region:     { label:"Source Region", field:"region", set:null },
+  region:     { label:"Source Region", field:"region", set:null, options: [...CANONICAL_REGIONS].sort() },
   status:     { label:"Status", field:"status", set:null },
 };
 
@@ -1266,12 +1264,8 @@ function renderProspectCharts(rows){
     // In region view, always show all 8 canonical regions (even if few rows).
     // In country view, keep the >=5 threshold to avoid clutter.
     }).filter(s => state.sourceView === "region" || s.total >= 5);
-    // Sort: high-to-low by total (default), or alphabetical
-    if (state.srcOnbSort === "alpha") {
-      sourceAgg.sort((a,b)=>a.label.localeCompare(b.label));
-    } else {
-      sourceAgg.sort((a,b)=>b.onb-a.onb||b.total-a.total);
-    }
+    // Sort: high-to-low by total
+    sourceAgg.sort((a,b)=>b.onb-a.onb||b.total-a.total);
     sourceAgg = sourceAgg.slice(0,20);
 
     const blank = n => n === 0 ? "" : n;
@@ -1306,23 +1300,9 @@ function renderProspectCharts(rows){
       <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${totConv}</td>
     </tr>`;
   };
-  // Source → onboarded sort state
-  if (!state.srcOnbSort) state.srcOnbSort = "default";
 
-  // Helper to update sort button styles
-  const updateSrcSortBtns = () => {
-    const def = document.getElementById("src-onb-sort-default");
-    const alp = document.getElementById("src-onb-sort-alpha");
-    if (def) def.className = state.srcOnbSort !== "alpha" ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
-    if (alp) alp.className = state.srcOnbSort === "alpha" ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
-    const th = document.getElementById("src-onb-total-th");
-    if (th) th.textContent = `Total ${state.srcOnbSort !== "alpha" ? "▼" : "⇅"}`;
-  };
-
-  window.setSrcOnbSort = (mode) => { state.srcOnbSort = mode; updateSrcSortBtns(); renderSourceOnboardChart(); };
   state._renderSourceOnboard = renderSourceOnboardChart;
   renderSourceOnboardChart();
-  updateSrcSortBtns();
   // MoM — grouped bar: this month vs last month, side by side per metric
   const allMonthsSorted = [...new Set(rows.map(r=>r.month).filter(Boolean))].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
   const lastTwo = allMonthsSorted.slice(-2);
