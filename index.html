@@ -1265,7 +1265,7 @@ function renderProspectCharts(rows){
       };
     // In region view, always show all 8 canonical regions (even if few rows).
     // In country view, keep the >=5 threshold to avoid clutter.
-    }).filter(s => state.sourceView === \"region\" || s.total >= 5);
+    }).filter(s => state.sourceView === "region" || s.total >= 5);
     // Sort: high-to-low by total (default), or alphabetical
     if (state.srcOnbSort === "alpha") {
       sourceAgg.sort((a,b)=>a.label.localeCompare(b.label));
