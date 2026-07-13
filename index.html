@@ -322,7 +322,7 @@
 
       <!-- Filters -->
       <section class="bg-white rounded-xl border border-zinc-200 p-4">
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3" id="filters-vp"></div>
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3" id="filters-vp"></div>
         <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
           <div id="active-chips-vp" class="flex flex-wrap gap-1.5"></div>
           <div class="flex items-center gap-2">
@@ -372,23 +372,59 @@
         </div>
       </div>
 
-      <!-- Table 3: Channel-wise Onboarded (mirrored from Prospects tab) -->
-      <!-- Table 3: Platform VS Reachout & Onboarding -->
-      <div class="bg-white rounded-xl border border-zinc-200 p-4">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="font-semibold text-sm">Platform VS Reachout &amp; Onboarding</h3>
-          <div class="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
-            <button id="vp-ch-onb-count" class="px-2.5 py-1 bg-indigo-600 text-white font-medium" onclick="setVpChannelView('count')">Count</button>
-            <button id="vp-ch-onb-mom" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setVpChannelView('mom')">MoM %</button>
+      <!-- Table 3: Platform VS Reachout & Onboarding + Lost Cases Reasons -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        <!-- Platform VS Reachout & Onboarding -->
+        <div class="bg-white rounded-xl border border-zinc-200 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-sm">Platform VS Reachout &amp; Onboarding</h3>
+            <div class="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
+              <button id="vp-ch-onb-count" class="px-2.5 py-1 bg-indigo-600 text-white font-medium" onclick="setVpChannelView('count')">Count</button>
+              <button id="vp-ch-onb-mom" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setVpChannelView('mom')">MoM %</button>
+            </div>
           </div>
+          <table class="w-full text-xs">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="vp-ch-onb-thead">
+              <tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">Onboarded</th></tr>
+            </thead>
+            <tbody id="vp-ch-onb-tbody" class="divide-y divide-zinc-100"></tbody>
+            <tfoot id="vp-ch-onb-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
+          </table>
         </div>
-        <table class="w-full text-xs">
-          <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="vp-ch-onb-thead">
-            <tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">Onboarded</th></tr>
-          </thead>
-          <tbody id="vp-ch-onb-tbody" class="divide-y divide-zinc-100"></tbody>
-          <tfoot id="vp-ch-onb-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
-        </table>
+
+        <!-- Lost Cases Reasons -->
+        <div class="bg-white rounded-xl border border-zinc-200 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="font-semibold text-sm">Lost Cases — Reasons Breakdown</h3>
+              <p class="text-xs text-zinc-500 mt-0.5" id="vp-lost-subtitle">all regions</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <select id="vp-lost-region" class="text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <option value="">All Regions</option>
+                <option value="AUS">AUS (Australia)</option>
+                <option value="EMEA">EMEA</option>
+                <option value="India">India</option>
+                <option value="SEA">SEA</option>
+                <option value="Subcontinent">Subcontinent</option>
+                <option value="UK">UK</option>
+                <option value="USA">USA</option>
+                <option value="Other">Other</option>
+              </select>
+              <div class="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
+                <button id="vp-lost-view-reason" class="px-2.5 py-1 bg-indigo-600 text-white font-medium" onclick="setVpLostView('reason')">By Reason</button>
+                <button id="vp-lost-view-source" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setVpLostView('source')">By Source</button>
+              </div>
+            </div>
+          </div>
+          <table class="w-full text-xs">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="vp-lost-thead"></thead>
+            <tbody id="vp-lost-tbody" class="divide-y divide-zinc-100"></tbody>
+            <tfoot id="vp-lost-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
+          </table>
+        </div>
+
       </div>
 
       <!-- Table 4: Source Country MoM Onboarded Growth -->
@@ -605,7 +641,7 @@ const state = {
   filters: {
     prospects: { poc:new Set(), month:new Set(), platform:new Set(), destination:new Set(), source:new Set(), region:new Set(), status:new Set(), search:"" },
     videos:    { poc:new Set(), month:new Set(), channel:new Set(), destination:new Set(), source:new Set(), paidAff:new Set(), quality:new Set(), search:"" },
-    vp:        { month:new Set(), destination:new Set(), source:new Set() },
+    vp:        { month:new Set(), destination:new Set(), source:new Set(), region:new Set() },
   },
 };
 
@@ -1516,14 +1552,66 @@ const VP_FILTERS = {
   month:       { label:"Month", field:"month", set:null, sort:(a,b)=>monthSortKey(a)-monthSortKey(b) },
   destination: { label:"Destination Country", field:"destination", set:null },
   source:      { label:"Source Country", field:"source", set:null },
+  region:      { label:"Source Region", field:"region", set:null },
 };
 
 function buildVpFilters(){
   for (const k of Object.keys(VP_FILTERS)) VP_FILTERS[k].set = state.filters.vp[k];
   const JAN_2026 = new Date(2026,0,1).getTime();
   const rows2026 = state.datasets.prospects.filter(r => monthSortKey(r.month) >= JAN_2026);
-  buildFilters("filters-vp", rows2026, VP_FILTERS, applyVpFilters);
+  // For region filter: only rows that have a valid region assigned
+  const rows2026WithRegion = rows2026.filter(r => r.region && CANONICAL_REGIONS.has(r.region));
+  const filters2026 = { ...VP_FILTERS };
+  // Build region filter from rows with region, others from all 2026 rows
+  buildFilters("filters-vp", rows2026, { month: VP_FILTERS.month, destination: VP_FILTERS.destination, source: VP_FILTERS.source }, applyVpFilters);
+  // Append region filter separately
+  const regionHost = document.getElementById("filters-vp");
+  if (regionHost) {
+    const regionSet = state.filters.vp.region;
+    const regionVals = [...new Set(rows2026WithRegion.map(r=>r.region).filter(Boolean))].sort();
+    const label = regionSet.size === 0 ? "All" : [...regionSet].sort().join(", ");
+    const regionDiv = document.createElement("div");
+    regionDiv.className = "flex flex-col gap-1";
+    regionDiv.innerHTML = `
+      <label class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Source Region</label>
+      <div class="relative">
+        <button id="vp-region-toggle" data-toggle="region"
+          class="w-full flex items-center justify-between gap-2 text-xs border border-zinc-200 rounded-lg px-3 py-2 bg-white hover:bg-zinc-50 text-left"
+          onclick="toggleVpRegionDropdown()">
+          <span id="vp-region-label">${label}</span>
+          <svg class="w-3 h-3 text-zinc-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+        </button>
+        <div id="vp-region-dropdown" class="hidden absolute z-50 mt-1 w-full bg-white border border-zinc-200 rounded-lg shadow-lg p-2 max-h-48 overflow-y-auto">
+          ${regionVals.map(rv => `
+            <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-zinc-50 cursor-pointer text-xs">
+              <input type="checkbox" class="vp-region-cb" value="${rv}" ${regionSet.has(rv)?"checked":""}> ${rv}
+            </label>`).join("")}
+        </div>
+      </div>`;
+    regionHost.appendChild(regionDiv);
+    // Wire checkboxes
+    regionHost.querySelectorAll(".vp-region-cb").forEach(cb => {
+      cb.addEventListener("change", () => {
+        if (cb.checked) state.filters.vp.region.add(cb.value);
+        else state.filters.vp.region.delete(cb.value);
+        const lbl = state.filters.vp.region.size === 0 ? "All" : [...state.filters.vp.region].sort().join(", ");
+        document.getElementById("vp-region-label").textContent = lbl;
+        applyVpFilters();
+      });
+    });
+  }
 }
+
+window.toggleVpRegionDropdown = function(){
+  const dd = document.getElementById("vp-region-dropdown");
+  if (dd) dd.classList.toggle("hidden");
+};
+document.addEventListener("click", e => {
+  if (!e.target.closest("#vp-region-toggle") && !e.target.closest("#vp-region-dropdown")) {
+    const dd = document.getElementById("vp-region-dropdown");
+    if (dd) dd.classList.add("hidden");
+  }
+});
 
 function applyVpFilters(){
   renderActiveChipsVp(state.datasets.prospects.length);
@@ -1561,6 +1649,9 @@ document.addEventListener("DOMContentLoaded", () => {
       host.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
       host.querySelectorAll("[data-toggle]").forEach(b => b.textContent = "All");
     }
+    // Reset region label
+    const rl = document.getElementById("vp-region-label");
+    if (rl) rl.textContent = "All";
     applyVpFilters();
   });
 });
@@ -1581,8 +1672,15 @@ function renderVpTab(){
     if (vf.month.size && !vf.month.has(r.month)) return false;
     if (vf.destination.size && !vf.destination.has(r.destination)) return false;
     if (vf.source.size && !vf.source.has(r.source)) return false;
+    if (vf.region && vf.region.size) {
+      // region filter: rows before REGION_CUTOFF are excluded when a region is selected
+      if (!r.region || !vf.region.has(r.region)) return false;
+    }
     return true;
   });
+
+  // Also re-render lost reasons chart when filters change
+  renderVpLostChart(rows);
 
   const last3 = getLastThreeMonths(); // ["April 2026","May 2026","June 2026"]
   const blank = n => (!n || n===0) ? "" : n;
@@ -1990,6 +2088,98 @@ function renderVpChannelOnboarded(rows){
   }
 }
 
+// ── Lost Cases Reasons chart (VP tab) ──
+function renderVpLostChart(allVpRows) {
+  // Cache rows for re-render on region/view change
+  state._vpLostRows = allVpRows;
+
+  const tbody   = document.getElementById("vp-lost-tbody");
+  const thead   = document.getElementById("vp-lost-thead");
+  const tfoot   = document.getElementById("vp-lost-tfoot");
+  const sub     = document.getElementById("vp-lost-subtitle");
+  if (!tbody) return;
+
+  if (!state.vpLostView) state.vpLostView = "reason";
+  const regionSel = document.getElementById("vp-lost-region");
+  const region = regionSel ? regionSel.value : "";
+
+  // Filter to lost rows only, then optionally by region
+  let rows = allVpRows.filter(r => r.status === "Lost");
+  if (region) rows = rows.filter(r => r.region === region);
+  if (sub) sub.textContent = region ? `Region: ${region}` : "all regions";
+
+  if (state.vpLostView === "reason") {
+    // Group by lost reason
+    if (thead) thead.innerHTML = `<tr>
+      <th class="px-3 py-2 text-left">Lost Reason</th>
+      <th class="px-3 py-2 text-right">Count</th>
+      <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">% of Lost</th>
+    </tr>`;
+    const reasonMap = {};
+    rows.forEach(r => {
+      const key = r.lostReason || "(not specified)";
+      reasonMap[key] = (reasonMap[key] || 0) + 1;
+    });
+    const sorted = Object.entries(reasonMap).sort((a,b)=>b[1]-a[1]);
+    const total = rows.length;
+    tbody.innerHTML = sorted.map(([reason, n]) => {
+      const pct = total ? ((n/total)*100).toFixed(1)+"%" : "—";
+      return `<tr class="hover:bg-zinc-50">
+        <td class="px-3 py-2 font-medium">${escapeHtml(reason)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-semibold text-rose-600">${n}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${pct}</td>
+      </tr>`;
+    }).join("");
+    if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
+      <td class="px-3 py-2 font-bold">Grand Total</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold text-rose-600">${total}</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">100%</td>
+    </tr>`;
+
+  } else {
+    // Group by Source Country
+    if (thead) thead.innerHTML = `<tr>
+      <th class="px-3 py-2 text-left">Source Country</th>
+      <th class="px-3 py-2 text-right">Lost</th>
+      <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">% of Lost</th>
+    </tr>`;
+    const srcMap = {};
+    rows.forEach(r => {
+      const key = r.source || "—";
+      srcMap[key] = (srcMap[key] || 0) + 1;
+    });
+    const sorted = Object.entries(srcMap).sort((a,b)=>b[1]-a[1]);
+    const total = rows.length;
+    tbody.innerHTML = sorted.map(([src, n]) => {
+      const pct = total ? ((n/total)*100).toFixed(1)+"%" : "—";
+      return `<tr class="hover:bg-zinc-50">
+        <td class="px-3 py-2 font-medium">${escapeHtml(src)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-semibold text-rose-600">${n}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${pct}</td>
+      </tr>`;
+    }).join("");
+    if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
+      <td class="px-3 py-2 font-bold">Grand Total</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold text-rose-600">${total}</td>
+      <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">100%</td>
+    </tr>`;
+  }
+}
+
+window.setVpLostView = function(mode) {
+  state.vpLostView = mode;
+  const btnR = document.getElementById("vp-lost-view-reason");
+  const btnS = document.getElementById("vp-lost-view-source");
+  if (btnR) btnR.className = mode === "reason" ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
+  if (btnS) btnS.className = mode === "source" ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
+  if (state._vpLostRows) renderVpLostChart(state._vpLostRows);
+};
+
+// Wire the region select to re-render on change
+document.addEventListener("DOMContentLoaded", () => {
+  const sel = document.getElementById("vp-lost-region");
+  if (sel) sel.addEventListener("change", () => { if (state._vpLostRows) renderVpLostChart(state._vpLostRows); });
+});
 function renderPocBreakdownTable(rows){
   state._pocBreakdownRows = rows;
   const thead  = document.getElementById("poc-breakdown-thead");
