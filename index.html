@@ -271,6 +271,58 @@
         <div class="h-[320px]"><canvas id="vch-dest"></canvas></div>
       </div>
 
+      <!-- Source Country VS Budget Spent + Content Type VS Performance -->
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="font-semibold text-sm">Source Country — Budget Spent</h3>
+            <p class="text-xs text-zinc-500 mt-0.5">total spend per source country · sorted high to low</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]">
+              <tr>
+                <th class="px-3 py-2 text-left">Source Country</th>
+                <th class="px-3 py-2 text-right">Videos</th>
+                <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Budget Spent</th>
+                <th class="px-3 py-2 text-right">Views</th>
+                <th class="px-3 py-2 text-right">Leads</th>
+                <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">CPL</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-src-budget-tbody" class="divide-y divide-zinc-100"></tbody>
+            <tfoot id="tbl-src-budget-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="font-semibold text-sm">Content Type — Performance</h3>
+            <p class="text-xs text-zinc-500 mt-0.5">views · traffic · leads · spend by content type</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]">
+              <tr>
+                <th class="px-3 py-2 text-left">Content Type</th>
+                <th class="px-3 py-2 text-right">Videos</th>
+                <th class="px-3 py-2 text-right">Views</th>
+                <th class="px-3 py-2 text-right">Traffic</th>
+                <th class="px-3 py-2 text-right text-emerald-700 bg-emerald-50">Leads</th>
+                <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Spend</th>
+                <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">CPL</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-content-type-tbody" class="divide-y divide-zinc-100"></tbody>
+            <tfoot id="tbl-content-type-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
+          </table>
+        </div>
+      </div>
+
       <!-- Video progress tracker -->
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
         <div class="flex items-center justify-between mb-1">
@@ -2649,6 +2701,103 @@ function renderVideoCharts(rows){
     options:{ plugins:{ legend:{position:"bottom"} }, scales:{ y:{beginAtZero:true} },
       onClick: chartClickFilter("videos","destination","filters-videos"), onHover: cursorHover() },
   });
+  // ── Source Country VS Budget Spent ──
+  const srcBudget = {};
+  for (const r of rows) {
+    const key = r.source && r.source !== "—" ? r.source : "(not specified)";
+    if (!srcBudget[key]) srcBudget[key] = { n:0, bud:0, vw:0, ld:0 };
+    srcBudget[key].n++;
+    srcBudget[key].bud += (r.budget || 0);
+    srcBudget[key].vw  += (r.views  || 0);
+    srcBudget[key].ld  += (r.leads  || 0);
+  }
+  const srcBudgetRows = Object.entries(srcBudget)
+    .map(([src, d]) => ({ src, ...d, cpl: safeDiv(d.bud, d.ld) }))
+    .filter(d => d.bud > 0)
+    .sort((a, b) => b.bud - a.bud);
+
+  const sbTbody = document.getElementById("tbl-src-budget-tbody");
+  const sbTfoot = document.getElementById("tbl-src-budget-tfoot");
+  if (sbTbody) {
+    sbTbody.innerHTML = srcBudgetRows.map((d, idx) => {
+      const z = idx % 2 === 0 ? "" : "bg-zinc-50/60";
+      return `<tr class="hover:bg-indigo-50 ${z}">
+        <td class="px-3 py-2 font-medium">${escapeHtml(d.src)}</td>
+        <td class="px-3 py-2 text-right tabular-nums text-zinc-500">${d.n}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-semibold bg-violet-50 text-violet-700">${fmtINR(d.bud)}</td>
+        <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.vw)}</td>
+        <td class="px-3 py-2 text-right tabular-nums text-emerald-700">${fmtNum(d.ld)}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${d.ld > 0 ? fmtINR(d.cpl) : "—"}</td>
+      </tr>`;
+    }).join("");
+    if (sbTfoot) {
+      const tN   = srcBudgetRows.reduce((s,d)=>s+d.n,   0);
+      const tBud = srcBudgetRows.reduce((s,d)=>s+d.bud, 0);
+      const tVw  = srcBudgetRows.reduce((s,d)=>s+d.vw,  0);
+      const tLd  = srcBudgetRows.reduce((s,d)=>s+d.ld,  0);
+      sbTfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
+        <td class="px-3 py-2 font-bold">Grand Total</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold text-zinc-500">${tN}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${fmtINR(tBud)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tVw)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">${fmtNum(tLd)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${tLd > 0 ? fmtINR(safeDiv(tBud,tLd)) : "—"}</td>
+      </tr>`;
+    }
+  }
+
+  // ── Content Type VS Performance ──
+  const ctData = {};
+  for (const r of rows) {
+    const key = r.contentType && r.contentType !== "—" ? r.contentType : "(not specified)";
+    if (!ctData[key]) ctData[key] = { n:0, vw:0, tr:0, ld:0, bud:0 };
+    ctData[key].n++;
+    ctData[key].vw  += (r.views   || 0);
+    ctData[key].tr  += (r.traffic || 0);
+    ctData[key].ld  += (r.leads   || 0);
+    ctData[key].bud += (r.budget  || 0);
+  }
+  // Sort: by leads desc (most impactful first), with (not specified) always last
+  const ctRows = Object.entries(ctData)
+    .map(([type, d]) => ({ type, ...d, cpl: safeDiv(d.bud, d.ld) }))
+    .sort((a, b) => {
+      if (a.type === "(not specified)") return 1;
+      if (b.type === "(not specified)") return -1;
+      return b.ld - a.ld;
+    });
+
+  const ctTbody = document.getElementById("tbl-content-type-tbody");
+  const ctTfoot = document.getElementById("tbl-content-type-tfoot");
+  if (ctTbody) {
+    ctTbody.innerHTML = ctRows.map((d, idx) => {
+      const z = idx % 2 === 0 ? "" : "bg-zinc-50/60";
+      return `<tr class="hover:bg-indigo-50 ${z}">
+        <td class="px-3 py-2 font-medium">${escapeHtml(d.type)}</td>
+        <td class="px-3 py-2 text-right tabular-nums text-zinc-500">${d.n}</td>
+        <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.vw)}</td>
+        <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.tr)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-semibold bg-emerald-50 text-emerald-700">${fmtNum(d.ld)}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-violet-50 text-violet-700">${d.bud > 0 ? fmtINR(d.bud) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${d.ld > 0 ? fmtINR(d.cpl) : "—"}</td>
+      </tr>`;
+    }).join("");
+    if (ctTfoot) {
+      const tN   = ctRows.reduce((s,d)=>s+d.n,   0);
+      const tVw  = ctRows.reduce((s,d)=>s+d.vw,  0);
+      const tTr  = ctRows.reduce((s,d)=>s+d.tr,  0);
+      const tLd  = ctRows.reduce((s,d)=>s+d.ld,  0);
+      const tBud = ctRows.reduce((s,d)=>s+d.bud, 0);
+      ctTfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
+        <td class="px-3 py-2 font-bold">Grand Total</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold text-zinc-500">${tN}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tVw)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tTr)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-emerald-50 text-emerald-700">${fmtNum(tLd)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${tBud > 0 ? fmtINR(tBud) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${tLd > 0 ? fmtINR(safeDiv(tBud,tLd)) : "—"}</td>
+      </tr>`;
+    }
+  }
 }
 
 function renderVideoProgress(rows){
