@@ -762,7 +762,7 @@ function normalizeProspect(r){
 }
 
 function normalizeVideo(r){
-  const poc = norm(getCell(r,"POC name"));
+  const poc = norm(getCell(r,"POC name","PoC","POC","Poc","poc"));
   if (!poc) return null;
   const date = parseDate(getCell(r,"Date"));
   const month = deriveMonth(getCell(r,"Month"), date);
