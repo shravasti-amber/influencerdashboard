@@ -1779,6 +1779,10 @@ function renderVpTab(){
     }
   }
 
+  // For Table 1, derive domestic rows from the already-filtered `rows`
+  // (which already excludes non-EMEA rows when region filter is active).
+  // Domestic sources are UK-Dom, US-Dom, Australia — if a region filter
+  // is active and it is NOT UK/USA/AUS, this will simply produce empty rows.
   const t1Rows = rows.filter(r =>
     t1MonthFilter.includes(r.month) &&
     DOMESTIC_SOURCES.includes(normSource(r.source)) &&
@@ -1929,13 +1933,12 @@ function renderVpTab(){
   // ── TABLE 4: Source Country Onboarded MoM Growth ──
   // Dynamic 3-month window: if filter months selected, use 3 months ending at latest selected; else last 3 in data
 
-  // Build sorted list of all months present in the full dataset (not filtered)
+  // Build sorted list of all months present in the full dataset (for window calculation only)
   const allDataMonths4 = [...new Set(allRows.map(r => r.month).filter(Boolean))]
     .sort((a,b) => monthSortKey(a) - monthSortKey(b));
 
   let t4Window; // [m1, m2, m3] — oldest to newest
   if (selectedVpMonths.length > 0) {
-    // Sort selected months and take the latest one; window = [latest-2, latest-1, latest]
     const sortedSel4 = [...selectedVpMonths].sort((a,b) => monthSortKey(a) - monthSortKey(b));
     const latestSel = sortedSel4[sortedSel4.length - 1];
     const latestIdx = allDataMonths4.indexOf(latestSel);
@@ -1945,7 +1948,6 @@ function renderVpTab(){
       latestSel,
     ];
   } else {
-    // No filter: use last 3 months in the data
     const last3data = allDataMonths4.slice(-3);
     t4Window = [
       last3data[0] || "",
@@ -1955,23 +1957,23 @@ function renderVpTab(){
   }
   const [m1, m2, m3] = t4Window;
 
-  // VP_SOURCES: all unique source countries from the full dataset, sorted
-  // (we use the full dataset so sources that have 0 in some months still appear)
-  const allSrc4 = [...new Set(allRows.filter(isOnb).map(r => (r.source||"").trim()).filter(s => s && s !== "—"))].sort();
+  // Use the FILTERED rows for source list and counts so the region/source/month
+  // filters all apply to Table 4 correctly
+  const allSrc4 = [...new Set(rows.filter(isOnb).map(r => (r.source||"").trim()).filter(s => s && s !== "—"))].sort();
 
   const t4Head = document.getElementById("vp-table4-thead");
   const t4Body = document.getElementById("vp-table4-tbody");
   const t4Foot = document.getElementById("vp-table4-tfoot");
 
-  // Count onboarded per source country per month, using allRows (full dataset, not filtered)
+  // Count onboarded per source country per month — using filtered rows
   const srcMonthCount4 = (src, month) => {
     const sl = src.toLowerCase().replace(/\s+/g," ").trim();
-    return allRows.filter(r => r.month === month && isOnb(r) &&
+    return rows.filter(r => r.month === month && isOnb(r) &&
       (r.source||"").toLowerCase().replace(/\s+/g," ").trim() === sl).length;
   };
 
-  // Grand total onboarded per month (across ALL sources)
-  const monthGrandTotal4 = month => allRows.filter(r => r.month === month && isOnb(r)).length;
+  // Grand total onboarded per month within filtered rows
+  const monthGrandTotal4 = month => rows.filter(r => r.month === month && isOnb(r)).length;
 
   const gt1 = monthGrandTotal4(m1);
   const gt2 = monthGrandTotal4(m2);
