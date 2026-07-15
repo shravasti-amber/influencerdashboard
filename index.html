@@ -397,32 +397,35 @@
         <div class="bg-white rounded-xl border border-zinc-200 p-4">
           <div class="flex items-center justify-between mb-3">
             <div>
-              <h3 class="font-semibold text-sm">Lost Cases — Reasons Breakdown</h3>
-              <p class="text-xs text-zinc-500 mt-0.5" id="vp-lost-subtitle">all regions</p>
+              <h3 class="font-semibold text-sm">Lost Cases — by Source Country</h3>
+              <p class="text-xs text-zinc-500 mt-0.5" id="vp-lost-subtitle">all regions · sorted high to low</p>
             </div>
-            <div class="flex items-center gap-2">
-              <select id="vp-lost-region" class="text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                <option value="">All Regions</option>
-                <option value="AUS">AUS (Australia)</option>
-                <option value="EMEA">EMEA</option>
-                <option value="India">India</option>
-                <option value="SEA">SEA</option>
-                <option value="Subcontinent">Subcontinent</option>
-                <option value="UK">UK</option>
-                <option value="USA">USA</option>
-                <option value="Other">Other</option>
-              </select>
-              <div class="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
-                <button id="vp-lost-view-reason" class="px-2.5 py-1 bg-indigo-600 text-white font-medium" onclick="setVpLostView('reason')">By Reason</button>
-                <button id="vp-lost-view-source" class="px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50" onclick="setVpLostView('source')">By Source</button>
-              </div>
-            </div>
+            <select id="vp-lost-region" class="text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              <option value="">All Regions</option>
+              <option value="AUS">AUS (Australia)</option>
+              <option value="EMEA">EMEA</option>
+              <option value="India">India</option>
+              <option value="SEA">SEA</option>
+              <option value="Subcontinent">Subcontinent</option>
+              <option value="UK">UK</option>
+              <option value="USA">USA</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
-          <table class="w-full text-xs">
-            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="vp-lost-thead"></thead>
-            <tbody id="vp-lost-tbody" class="divide-y divide-zinc-100"></tbody>
-            <tfoot id="vp-lost-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
-          </table>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="vp-lost-thead">
+                <tr>
+                  <th class="px-3 py-2 text-left">Source Country</th>
+                  <th class="px-3 py-2 text-right">Lost</th>
+                  <th class="px-3 py-2 text-right bg-yellow-50 text-yellow-700">% of Lost</th>
+                  <th class="px-3 py-2 text-left">Top Reason</th>
+                </tr>
+              </thead>
+              <tbody id="vp-lost-tbody" class="divide-y divide-zinc-100"></tbody>
+              <tfoot id="vp-lost-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
+            </table>
+          </div>
         </div>
 
       </div>
@@ -2090,90 +2093,56 @@ function renderVpChannelOnboarded(rows){
 
 // ── Lost Cases Reasons chart (VP tab) ──
 function renderVpLostChart(allVpRows) {
-  // Cache rows for re-render on region/view change
   state._vpLostRows = allVpRows;
 
-  const tbody   = document.getElementById("vp-lost-tbody");
-  const thead   = document.getElementById("vp-lost-thead");
-  const tfoot   = document.getElementById("vp-lost-tfoot");
-  const sub     = document.getElementById("vp-lost-subtitle");
+  const tbody = document.getElementById("vp-lost-tbody");
+  const tfoot = document.getElementById("vp-lost-tfoot");
+  const sub   = document.getElementById("vp-lost-subtitle");
   if (!tbody) return;
 
-  if (!state.vpLostView) state.vpLostView = "reason";
   const regionSel = document.getElementById("vp-lost-region");
   const region = regionSel ? regionSel.value : "";
 
-  // Filter to lost rows only, then optionally by region
-  let rows = allVpRows.filter(r => r.status === "Lost");
-  if (region) rows = rows.filter(r => r.region === region);
-  if (sub) sub.textContent = region ? `Region: ${region}` : "all regions";
+  // Filter to Lost rows, then optionally by region
+  let lostRows = allVpRows.filter(r => r.status === "Lost");
+  if (region) lostRows = lostRows.filter(r => r.region === region);
+  if (sub) sub.textContent = (region ? `Region: ${region}` : "all regions") + " · sorted high to low";
 
-  if (state.vpLostView === "reason") {
-    // Group by lost reason
-    if (thead) thead.innerHTML = `<tr>
-      <th class="px-3 py-2 text-left">Lost Reason</th>
-      <th class="px-3 py-2 text-right">Count</th>
-      <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">% of Lost</th>
-    </tr>`;
-    const reasonMap = {};
-    rows.forEach(r => {
-      const key = r.lostReason || "(not specified)";
-      reasonMap[key] = (reasonMap[key] || 0) + 1;
-    });
-    const sorted = Object.entries(reasonMap).sort((a,b)=>b[1]-a[1]);
-    const total = rows.length;
-    tbody.innerHTML = sorted.map(([reason, n]) => {
-      const pct = total ? ((n/total)*100).toFixed(1)+"%" : "—";
-      return `<tr class="hover:bg-zinc-50">
-        <td class="px-3 py-2 font-medium">${escapeHtml(reason)}</td>
-        <td class="px-3 py-2 text-right tabular-nums font-semibold text-rose-600">${n}</td>
-        <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${pct}</td>
-      </tr>`;
-    }).join("");
-    if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
-      <td class="px-3 py-2 font-bold">Grand Total</td>
-      <td class="px-3 py-2 text-right tabular-nums font-bold text-rose-600">${total}</td>
-      <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">100%</td>
-    </tr>`;
+  const grandTotal = lostRows.length;
 
-  } else {
-    // Group by Source Country
-    if (thead) thead.innerHTML = `<tr>
-      <th class="px-3 py-2 text-left">Source Country</th>
-      <th class="px-3 py-2 text-right">Lost</th>
-      <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">% of Lost</th>
+  // Group by Source Country, collecting counts and reason tallies
+  const srcData = {};
+  lostRows.forEach(r => {
+    const key = r.source || "—";
+    if (!srcData[key]) srcData[key] = { count: 0, reasons: {} };
+    srcData[key].count++;
+    const reason = r.lostReason || "(not specified)";
+    srcData[key].reasons[reason] = (srcData[key].reasons[reason] || 0) + 1;
+  });
+
+  // Sort high → low by count
+  const sorted = Object.entries(srcData).sort((a, b) => b[1].count - a[1].count);
+
+  tbody.innerHTML = sorted.map(([src, data], idx) => {
+    const pct = grandTotal ? ((data.count / grandTotal) * 100).toFixed(1) + "%" : "—";
+    // Top reason = reason with highest tally
+    const topReason = Object.entries(data.reasons).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+    const zebraBase = idx % 2 === 0 ? "" : "bg-zinc-50/60";
+    return `<tr class="hover:bg-indigo-50 ${zebraBase}">
+      <td class="px-3 py-2 font-medium">${escapeHtml(src)}</td>
+      <td class="px-3 py-2 text-right tabular-nums font-semibold text-rose-600">${data.count}</td>
+      <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${pct}</td>
+      <td class="px-3 py-2 text-zinc-500 italic">${escapeHtml(topReason)}</td>
     </tr>`;
-    const srcMap = {};
-    rows.forEach(r => {
-      const key = r.source || "—";
-      srcMap[key] = (srcMap[key] || 0) + 1;
-    });
-    const sorted = Object.entries(srcMap).sort((a,b)=>b[1]-a[1]);
-    const total = rows.length;
-    tbody.innerHTML = sorted.map(([src, n]) => {
-      const pct = total ? ((n/total)*100).toFixed(1)+"%" : "—";
-      return `<tr class="hover:bg-zinc-50">
-        <td class="px-3 py-2 font-medium">${escapeHtml(src)}</td>
-        <td class="px-3 py-2 text-right tabular-nums font-semibold text-rose-600">${n}</td>
-        <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${pct}</td>
-      </tr>`;
-    }).join("");
-    if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
-      <td class="px-3 py-2 font-bold">Grand Total</td>
-      <td class="px-3 py-2 text-right tabular-nums font-bold text-rose-600">${total}</td>
-      <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">100%</td>
-    </tr>`;
-  }
+  }).join("");
+
+  if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
+    <td class="px-3 py-2 font-bold">Grand Total</td>
+    <td class="px-3 py-2 text-right tabular-nums font-bold text-rose-600">${grandTotal}</td>
+    <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">100%</td>
+    <td class="px-3 py-2"></td>
+  </tr>`;
 }
-
-window.setVpLostView = function(mode) {
-  state.vpLostView = mode;
-  const btnR = document.getElementById("vp-lost-view-reason");
-  const btnS = document.getElementById("vp-lost-view-source");
-  if (btnR) btnR.className = mode === "reason" ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
-  if (btnS) btnS.className = mode === "source" ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
-  if (state._vpLostRows) renderVpLostChart(state._vpLostRows);
-};
 
 // Wire the region select to re-render on change
 document.addEventListener("DOMContentLoaded", () => {
