@@ -676,7 +676,8 @@ function escapeHtml(s){return (s??"").toString().replace(/[&<>"]/g, c => ({"&":"
 function escapeAttr(s){return escapeHtml(s).replace(/'/g,"&#39;");}
 function fmtNum(n){ if (n==null||isNaN(n)) return "—"; return n.toLocaleString(undefined,{maximumFractionDigits:0}); }
 function fmtDecimal(n){ if (n==null||isNaN(n)||!isFinite(n)) return "—"; return n.toFixed(2); }
-function fmtINR(n){ if (n==null||isNaN(n)||!isFinite(n)) return "—"; if (n>=1e7) return "₹"+(n/1e7).toFixed(2)+"Cr"; if (n>=1e5) return "₹"+(n/1e5).toFixed(2)+"L"; if (n>=1000) return "₹"+(n/1000).toFixed(1)+"K"; return "₹"+Math.round(n).toLocaleString(); }
+function fmtINR(n){ if (n==null||isNaN(n)||!isFinite(n)) return "—"; if (n>=1e7) return "₹"+(n/1e7).toFixed(2)+"Cr"; if (n>=1e5) return "₹"+(n/1e5).toFixed(2)+"L"; if (n>=1000) return "₹"+(n/1000).toFixed(1)+"K"; return "₹"+Math.round(n).toLocaleString('en-IN'); }
+function fmtINRExact(n){ if (n==null||isNaN(n)||!isFinite(n)) return "—"; return "₹"+Math.round(n).toLocaleString('en-IN'); }
 function safeDiv(a,b){ return b ? a/b : 0; }
 
 // ---------- STATE ----------
@@ -2579,7 +2580,7 @@ function renderVideoCharts(rows){
       <div class="text-[11px] uppercase tracking-wide font-semibold ${color}">${title}</div>
       <div class="text-xl font-bold mt-1">${rs.length} videos</div>
       <div class="mt-2 space-y-0.5 text-xs">
-        <div class="flex justify-between"><span class="text-zinc-500">Spend</span><span class="font-medium">${fmtINR(bud)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Spend</span><span class="font-medium">${fmtINRExact(bud)}</span></div>
         <div class="flex justify-between"><span class="text-zinc-500">Views</span><span class="font-medium">${fmtNum(vw)}</span></div>
         <div class="flex justify-between"><span class="text-zinc-500">Traffic</span><span class="font-medium">${fmtNum(tr)}</span></div>
         <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPL</span><span class="font-medium">${fmtINR(safeDiv(bud,ld))}</span></div>
@@ -2723,6 +2724,7 @@ function renderVideoCharts(rows){
   // ── Source Country VS Budget Spent ──
   const srcBudget = {};
   for (const r of rows) {
+    if (r.paidAff !== "Paid") continue; // Count only paid videos
     const key = r.source && r.source !== "—" ? r.source : "(not specified)";
     if (!srcBudget[key]) srcBudget[key] = { n:0, bud:0, vw:0, ld:0 };
     srcBudget[key].n++;
@@ -2743,7 +2745,7 @@ function renderVideoCharts(rows){
       return `<tr class="hover:bg-indigo-50 ${z}">
         <td class="px-3 py-2 font-medium">${escapeHtml(d.src)}</td>
         <td class="px-3 py-2 text-right tabular-nums text-zinc-500">${d.n}</td>
-        <td class="px-3 py-2 text-right tabular-nums font-semibold bg-violet-50 text-violet-700">${fmtINR(d.bud)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-semibold bg-violet-50 text-violet-700">${fmtINRExact(d.bud)}</td>
         <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.vw)}</td>
         <td class="px-3 py-2 text-right tabular-nums text-emerald-700">${fmtNum(d.ld)}</td>
         <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${d.ld > 0 ? fmtINR(d.cpl) : "—"}</td>
@@ -2757,7 +2759,7 @@ function renderVideoCharts(rows){
       sbTfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
         <td class="px-3 py-2 font-bold">Grand Total</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold text-zinc-500">${tN}</td>
-        <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${fmtINR(tBud)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${fmtINRExact(tBud)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tVw)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">${fmtNum(tLd)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${tLd > 0 ? fmtINR(safeDiv(tBud,tLd)) : "—"}</td>
