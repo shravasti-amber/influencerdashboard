@@ -768,8 +768,18 @@ function normalizeVideo(r){
   const dest = mapVal(getCell(r,"Destination Country","Destination"), DEST_MAP, "");
   const paidAffRaw = norm(getCell(r,"Paid/affiliate")).toLowerCase();
   const paidAff = PAID_AFF_MAP[paidAffRaw] || (paidAffRaw ? "Other" : "");
-  // Strip commas and currency symbols before parsing (handles Indian formatting like "1,40,000")
-  const num = v => { const clean = (v||"").toString().replace(/[,₹\s]/g,""); const n = parseFloat(clean); return isNaN(n) ? 0 : n; };
+  // Strip only commas and currency symbols before parsing; handle L/K shorthand
+  const num = v => {
+    let s = (v||"").toString().trim();
+    // Remove currency symbols and commas only
+    s = s.replace(/[₹,]/g, "");
+    // Handle lakh suffix: "6.45L" → 645000
+    if (/^\d+(\.\d+)?[Ll]$/.test(s)) return Math.round(parseFloat(s) * 1e5);
+    // Handle K suffix: "13.3K" → 13300
+    if (/^\d+(\.\d+)?[Kk]$/.test(s)) return Math.round(parseFloat(s) * 1e3);
+    const n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
+  };
   const rawCT = norm(getCell(r,"Content Type")) || "—";
   const ctKey = rawCT.trim().toLowerCase();
   const CT_CANONICAL = { "amber fest":"Amber Fest","amberfest":"Amber Fest","amber  fest":"Amber Fest","study abroad":"Study Abroad","scholarship":"Scholarship","room tour":"Room Tour","visa":"Visa","jobs":"Jobs","gap":"GAP" };
