@@ -774,10 +774,12 @@ function normalizeVideo(r){
   const ctKey = rawCT.trim().toLowerCase();
   const CT_CANONICAL = { "amber fest":"Amber Fest","amberfest":"Amber Fest","amber  fest":"Amber Fest","study abroad":"Study Abroad","scholarship":"Scholarship","room tour":"Room Tour","visa":"Visa","jobs":"Jobs","gap":"GAP" };
   const contentType = CT_CANONICAL[ctKey] || rawCT;
+  const actRaw = norm(getCell(r,"Activity"));
   return {
     poc: titleCase(poc),
     date, month, monthSort: monthSortKey(month),
-    activity: norm(getCell(r,"Activity")) || "—",
+    activity: actRaw || "—",
+    isCrossPosted: !actRaw, // true when Activity column is blank
     partner: norm(getCell(r,"Partner name")),
     link: norm(getCell(r,"Links of activity","Link of activity")),
     budget: num(getCell(r,"Budget (INR)")),
@@ -2514,10 +2516,10 @@ function renderVideoKPIs(rows){
   const cpv = safeDiv(budget,views);
   const cpl = safeDiv(budget,leads);
   const cpb = safeDiv(budget,bookforms);
-  const videosLive = rows.filter(r=>r.activity && r.activity !== "—").length;
-  const crossPosted = rows.length - videosLive;
+  const videosLive = rows.filter(r => !r.isCrossPosted).length;
+  const crossPosted = rows.filter(r => r.isCrossPosted).length;
   const k = [
-    { label:"Videos live", value: videosLive.toLocaleString(), sub:`${new Set(rows.map(r=>r.partner.toLowerCase()).filter(Boolean)).size} unique partners · ${crossPosted} cross-posted` },
+    { label:"Videos live", value: videosLive.toLocaleString(), sub:`${crossPosted} cross-posted` },
     { label:"Total spend", value: fmtINR(budget), sub:`${rows.filter(r=>r.budget>0).length} paid videos` },
     { label:"Views", value: fmtNum(views), sub:`CPV ₹${fmtDecimal(cpv)}` },
     { label:"Traffic", value: fmtNum(traffic), sub: views && leads ? ((leads/traffic)*100).toFixed(2)+"% of traffic → leads" : "" },
