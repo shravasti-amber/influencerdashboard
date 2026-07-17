@@ -266,7 +266,7 @@
                 <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Budget Spent</th>
                 <th class="px-3 py-2 text-right">Views</th>
                 <th class="px-3 py-2 text-right">Leads</th>
-                <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">CPL</th>
+                <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">CPV</th>
               </tr>
             </thead>
             <tbody id="tbl-src-budget-tbody" class="divide-y divide-zinc-100"></tbody>
@@ -805,7 +805,7 @@ function normalizeVideo(r){
     bookforms: num(getCell(r,"Bookforms")),
     bookings: num(getCell(r,"Bookings")),
     language: norm(getCell(r,"Language")) || "—",
-    paidAff: paidAff || "—",
+    paidAff: (!actRaw) ? "—" : (paidAff || "—"),
     newExisting: norm(getCell(r,"New onboarding / Existing","New onboarding / Existing ")),
     quality: norm(getCell(r,"Quality")) || "—",
   };
@@ -2583,7 +2583,7 @@ function renderVideoCharts(rows){
         <div class="flex justify-between"><span class="text-zinc-500">Spend</span><span class="font-medium">${fmtINRExact(bud)}</span></div>
         <div class="flex justify-between"><span class="text-zinc-500">Views</span><span class="font-medium">${fmtNum(vw)}</span></div>
         <div class="flex justify-between"><span class="text-zinc-500">Traffic</span><span class="font-medium">${fmtNum(tr)}</span></div>
-        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPL</span><span class="font-medium">${fmtINR(safeDiv(bud,ld))}</span></div>
+        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-medium">${fmtINR(safeDiv(bud,vw))}</span></div>
       </div>
     </div>`;
   };
@@ -2733,7 +2733,7 @@ function renderVideoCharts(rows){
     srcBudget[key].ld  += (r.leads  || 0);
   }
   const srcBudgetRows = Object.entries(srcBudget)
-    .map(([src, d]) => ({ src, ...d, cpl: safeDiv(d.bud, d.ld) }))
+    .map(([src, d]) => ({ src, ...d, cpv: safeDiv(d.bud, d.vw) }))
     .filter(d => d.bud > 0)
     .sort((a, b) => b.bud - a.bud);
 
@@ -2748,7 +2748,7 @@ function renderVideoCharts(rows){
         <td class="px-3 py-2 text-right tabular-nums font-semibold bg-violet-50 text-violet-700">${fmtINRExact(d.bud)}</td>
         <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.vw)}</td>
         <td class="px-3 py-2 text-right tabular-nums text-emerald-700">${fmtNum(d.ld)}</td>
-        <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${d.ld > 0 ? fmtINR(d.cpl) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${d.vw > 0 ? fmtINR(d.cpv) : "—"}</td>
       </tr>`;
     }).join("");
     if (sbTfoot) {
@@ -2762,7 +2762,7 @@ function renderVideoCharts(rows){
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${fmtINRExact(tBud)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tVw)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">${fmtNum(tLd)}</td>
-        <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${tLd > 0 ? fmtINR(safeDiv(tBud,tLd)) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${tVw > 0 ? fmtINR(safeDiv(tBud,tVw)) : "—"}</td>
       </tr>`;
     }
   }
