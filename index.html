@@ -233,7 +233,7 @@
       </div>
 
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5">
-        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Paid vs Affiliate</h3><span class="text-xs text-zinc-500">spend, leads, efficiency</span></div>
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Paid vs Affiliate</h3><span class="text-xs text-zinc-500">spend · views · traffic · efficiency</span></div>
         <div id="paid-affiliate-cards" class="grid grid-cols-2 gap-3 py-2"></div>
       </div>
 
@@ -245,30 +245,8 @@
       </div>
 
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5">
-        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Cost efficiency by platform</h3><span class="text-xs text-zinc-500">CPV · CPL · CPB</span></div>
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Cost efficiency by platform</h3><span class="text-xs text-zinc-500">CPV · CPL · efficiency</span></div>
         <div class="overflow-x-auto"><table class="w-full text-xs" id="tbl-channel-eff"></table></div>
-      </div>
-
-
-
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-7">
-        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">POC performance — traffic & leads</h3><span class="text-xs text-zinc-500">all POCs · click to drill</span></div>
-        <div class="h-[520px]"><canvas id="vch-poc"></canvas></div>
-      </div>
-
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5">
-        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Top partners by leads</h3><span class="text-xs text-zinc-500">top 30</span></div>
-        <div class="h-[700px]"><canvas id="vch-partner"></canvas></div>
-      </div>
-
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6">
-        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Source country → leads</h3><span class="text-xs text-zinc-500">top sources driving traffic & leads</span></div>
-        <div class="h-[320px]"><canvas id="vch-source"></canvas></div>
-      </div>
-
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6">
-        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Destination → leads</h3><span class="text-xs text-zinc-500">where we are getting leads</span></div>
-        <div class="h-[320px]"><canvas id="vch-dest"></canvas></div>
       </div>
 
       <!-- Source Country VS Budget Spent + Content Type VS Performance -->
@@ -321,6 +299,26 @@
             <tfoot id="tbl-content-type-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
           </table>
         </div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-7">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">POC performance — traffic & leads</h3><span class="text-xs text-zinc-500">all POCs · click to drill</span></div>
+        <div class="h-[520px]"><canvas id="vch-poc"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Top partners by leads</h3><span class="text-xs text-zinc-500">top 30</span></div>
+        <div class="h-[700px]"><canvas id="vch-partner"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Source country → leads</h3><span class="text-xs text-zinc-500">top sources driving traffic & leads</span></div>
+        <div class="h-[320px]"><canvas id="vch-source"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Destination → leads</h3><span class="text-xs text-zinc-500">where we are getting leads</span></div>
+        <div class="h-[320px]"><canvas id="vch-dest"></canvas></div>
       </div>
 
       <!-- Video progress tracker -->
@@ -772,6 +770,10 @@ function normalizeVideo(r){
   const paidAff = PAID_AFF_MAP[paidAffRaw] || (paidAffRaw ? "Other" : "");
   // Strip commas and currency symbols before parsing (handles Indian formatting like "1,40,000")
   const num = v => { const clean = (v||"").toString().replace(/[,₹\s]/g,""); const n = parseFloat(clean); return isNaN(n) ? 0 : n; };
+  const rawCT = norm(getCell(r,"Content Type")) || "—";
+  const ctKey = rawCT.trim().toLowerCase();
+  const CT_CANONICAL = { "amber fest":"Amber Fest","amberfest":"Amber Fest","amber  fest":"Amber Fest","study abroad":"Study Abroad","scholarship":"Scholarship","room tour":"Room Tour","visa":"Visa","jobs":"Jobs","gap":"GAP" };
+  const contentType = CT_CANONICAL[ctKey] || rawCT;
   return {
     poc: titleCase(poc),
     date, month, monthSort: monthSortKey(month),
@@ -779,7 +781,7 @@ function normalizeVideo(r){
     partner: norm(getCell(r,"Partner name")),
     link: norm(getCell(r,"Links of activity","Link of activity")),
     budget: num(getCell(r,"Budget (INR)")),
-    contentType: norm(getCell(r,"Content Type")) || "—",
+    contentType,
     channel: channel || "—",
     source: norm(getCell(r,"Source Country")) || "—",
     destination: dest || "—",
@@ -2512,8 +2514,10 @@ function renderVideoKPIs(rows){
   const cpv = safeDiv(budget,views);
   const cpl = safeDiv(budget,leads);
   const cpb = safeDiv(budget,bookforms);
+  const videosLive = rows.filter(r=>r.activity && r.activity !== "—").length;
+  const crossPosted = rows.length - videosLive;
   const k = [
-    { label:"Videos live", value: rows.filter(r=>r.activity && r.activity !== "—").length.toLocaleString(), sub:`${new Set(rows.map(r=>r.partner.toLowerCase()).filter(Boolean)).size} unique partners` },
+    { label:"Videos live", value: videosLive.toLocaleString(), sub:`${new Set(rows.map(r=>r.partner.toLowerCase()).filter(Boolean)).size} unique partners · ${crossPosted} cross-posted` },
     { label:"Total spend", value: fmtINR(budget), sub:`${rows.filter(r=>r.budget>0).length} paid videos` },
     { label:"Views", value: fmtNum(views), sub:`CPV ₹${fmtDecimal(cpv)}` },
     { label:"Traffic", value: fmtNum(traffic), sub: views && leads ? ((leads/traffic)*100).toFixed(2)+"% of traffic → leads" : "" },
@@ -2558,20 +2562,22 @@ function renderVideoCharts(rows){
   const paidRows = rows.filter(r=>r.paidAff==="Paid");
   const affRows  = rows.filter(r=>r.paidAff==="Affiliate");
   const card = (title, rs, color) => {
-    const bud = sumField(rs,"budget"), vw=sumField(rs,"views"), ld=sumField(rs,"leads"), bk=sumField(rs,"bookings");
+    const bud = sumField(rs,"budget"), vw=sumField(rs,"views"), tr=sumField(rs,"traffic"), ld=sumField(rs,"leads");
     return `<div class="bg-zinc-50 rounded-lg p-3 border border-zinc-200">
       <div class="text-[11px] uppercase tracking-wide font-semibold ${color}">${title}</div>
       <div class="text-xl font-bold mt-1">${rs.length} videos</div>
       <div class="mt-2 space-y-0.5 text-xs">
         <div class="flex justify-between"><span class="text-zinc-500">Spend</span><span class="font-medium">${fmtINR(bud)}</span></div>
         <div class="flex justify-between"><span class="text-zinc-500">Views</span><span class="font-medium">${fmtNum(vw)}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Leads</span><span class="font-medium">${fmtNum(ld)}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Bookings</span><span class="font-medium">${fmtNum(bk)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Traffic</span><span class="font-medium">${fmtNum(tr)}</span></div>
         <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPL</span><span class="font-medium">${fmtINR(safeDiv(bud,ld))}</span></div>
       </div>
     </div>`;
   };
   document.getElementById("paid-affiliate-cards").innerHTML = card("Paid", paidRows, "text-rose-600") + card("Affiliate", affRows, "text-emerald-600");
+  // Also update the subtitle
+  const pavSub = document.querySelector('#paid-affiliate-cards')?.closest('.bg-white')?.querySelector('span.text-xs');
+  if (pavSub) pavSub.textContent = "spend · views · traffic · efficiency";
 
   // ----- Trend over time -----
   const months = [...new Set(rows.map(r=>r.month).filter(Boolean))].sort((a,b)=>monthSortKey(a)-monthSortKey(b));
