@@ -770,7 +770,8 @@ function normalizeVideo(r){
   const dest = mapVal(getCell(r,"Destination Country","Destination"), DEST_MAP, "");
   const paidAffRaw = norm(getCell(r,"Paid/affiliate")).toLowerCase();
   const paidAff = PAID_AFF_MAP[paidAffRaw] || (paidAffRaw ? "Other" : "");
-  const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+  // Strip commas and currency symbols before parsing (handles Indian formatting like "1,40,000")
+  const num = v => { const clean = (v||"").toString().replace(/[,₹\s]/g,""); const n = parseFloat(clean); return isNaN(n) ? 0 : n; };
   return {
     poc: titleCase(poc),
     date, month, monthSort: monthSortKey(month),
@@ -2747,9 +2748,26 @@ function renderVideoCharts(rows){
   }
 
   // ── Content Type VS Performance ──
+  // Canonical content type normalizer — merge typo variants
+  const CONTENT_TYPE_CANONICAL = {
+    "amber fest": "Amber Fest",
+    "amberfest": "Amber Fest",
+    "amber  fest": "Amber Fest",
+    "study abroad": "Study Abroad",
+    "scholarship": "Scholarship",
+    "room tour": "Room Tour",
+    "visa": "Visa",
+    "jobs": "Jobs",
+  };
+  const canonicalCT = raw => {
+    if (!raw || raw === "—") return "(not specified)";
+    const key = raw.trim().toLowerCase();
+    return CONTENT_TYPE_CANONICAL[key] || raw.trim();
+  };
+
   const ctData = {};
   for (const r of rows) {
-    const key = r.contentType && r.contentType !== "—" ? r.contentType : "(not specified)";
+    const key = canonicalCT(r.contentType);
     if (!ctData[key]) ctData[key] = { n:0, vw:0, tr:0, ld:0, bud:0 };
     ctData[key].n++;
     ctData[key].vw  += (r.views   || 0);
