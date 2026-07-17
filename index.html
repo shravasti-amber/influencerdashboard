@@ -265,7 +265,7 @@
                 <th class="px-3 py-2 text-right">Videos</th>
                 <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Budget Spent</th>
                 <th class="px-3 py-2 text-right">Views</th>
-                <th class="px-3 py-2 text-right">Leads</th>
+                <th class="px-3 py-2 text-right">Traffic</th>
                 <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">CPV</th>
               </tr>
             </thead>
@@ -2518,7 +2518,8 @@ function applyVideoFilters(){
 function sumField(rows, field){ return rows.reduce((s,r)=>s+(r[field]||0), 0); }
 
 function renderVideoKPIs(rows){
-  const budget = sumField(rows,"budget");
+  const paidRows = rows.filter(r => r.paidAff === "Paid");
+  const budget = sumField(paidRows, "budget");
   const views = sumField(rows,"views");
   const traffic = sumField(rows,"traffic");
   const leads = sumField(rows,"leads");
@@ -2531,7 +2532,7 @@ function renderVideoKPIs(rows){
   const crossPosted = rows.filter(r => r.isCrossPosted).length;
   const k = [
     { label:"Videos live", value: videosLive.toLocaleString(), sub:`${crossPosted} cross-posted` },
-    { label:"Total spend", value: fmtINR(budget), sub:`${rows.filter(r=>r.budget>0).length} paid videos` },
+    { label:"Total spend", value: fmtINR(budget), sub:`${paidRows.length} paid videos` },
     { label:"Views", value: fmtNum(views), sub:`CPV ₹${fmtDecimal(cpv)}` },
     { label:"Traffic", value: fmtNum(traffic), sub: views && leads ? ((leads/traffic)*100).toFixed(2)+"% of traffic → leads" : "" },
     { label:"Leads", value: fmtNum(leads), sub:`CPL ${fmtINR(cpl)}`, color:"text-emerald-600" },
@@ -2730,7 +2731,7 @@ function renderVideoCharts(rows){
     srcBudget[key].n++;
     srcBudget[key].bud += (r.budget || 0);
     srcBudget[key].vw  += (r.views  || 0);
-    srcBudget[key].ld  += (r.leads  || 0);
+    srcBudget[key].tr  += (r.traffic|| 0);
   }
   const srcBudgetRows = Object.entries(srcBudget)
     .map(([src, d]) => ({ src, ...d, cpv: safeDiv(d.bud, d.vw) }))
@@ -2747,7 +2748,7 @@ function renderVideoCharts(rows){
         <td class="px-3 py-2 text-right tabular-nums text-zinc-500">${d.n}</td>
         <td class="px-3 py-2 text-right tabular-nums font-semibold bg-violet-50 text-violet-700">${fmtINRExact(d.bud)}</td>
         <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.vw)}</td>
-        <td class="px-3 py-2 text-right tabular-nums text-emerald-700">${fmtNum(d.ld)}</td>
+        <td class="px-3 py-2 text-right tabular-nums text-sky-600">${fmtNum(d.tr)}</td>
         <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${d.vw > 0 ? fmtINR(d.cpv) : "—"}</td>
       </tr>`;
     }).join("");
@@ -2755,13 +2756,13 @@ function renderVideoCharts(rows){
       const tN   = srcBudgetRows.reduce((s,d)=>s+d.n,   0);
       const tBud = srcBudgetRows.reduce((s,d)=>s+d.bud, 0);
       const tVw  = srcBudgetRows.reduce((s,d)=>s+d.vw,  0);
-      const tLd  = srcBudgetRows.reduce((s,d)=>s+d.ld,  0);
+      const tTr  = srcBudgetRows.reduce((s,d)=>s+d.tr,  0);
       sbTfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
         <td class="px-3 py-2 font-bold">Grand Total</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold text-zinc-500">${tN}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${fmtINRExact(tBud)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tVw)}</td>
-        <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">${fmtNum(tLd)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold text-sky-600">${fmtNum(tTr)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${tVw > 0 ? fmtINR(safeDiv(tBud,tVw)) : "—"}</td>
       </tr>`;
     }
