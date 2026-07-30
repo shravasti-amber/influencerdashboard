@@ -2727,7 +2727,7 @@ function renderVideoCharts(rows){
   for (const r of rows) {
     if (r.paidAff !== "Paid") continue; // Count only paid videos
     const key = r.source && r.source !== "—" ? r.source : "(not specified)";
-    if (!srcBudget[key]) srcBudget[key] = { n:0, bud:0, vw:0, ld:0 };
+    if (!srcBudget[key]) srcBudget[key] = { n:0, bud:0, vw:0, ld:0, tr:0 };
     srcBudget[key].n++;
     srcBudget[key].bud += (r.budget || 0);
     srcBudget[key].vw  += (r.views  || 0);
