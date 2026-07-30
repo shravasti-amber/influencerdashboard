@@ -2584,7 +2584,7 @@ function renderVideoCharts(rows){
         <div class="flex justify-between"><span class="text-zinc-500">Spend</span><span class="font-medium">${fmtINRExact(bud)}</span></div>
         <div class="flex justify-between"><span class="text-zinc-500">Views</span><span class="font-medium">${fmtNum(vw)}</span></div>
         <div class="flex justify-between"><span class="text-zinc-500">Traffic</span><span class="font-medium">${fmtNum(tr)}</span></div>
-        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-medium">${fmtINR(safeDiv(bud,vw))}</span></div>
+        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-medium">₹${fmtDecimal(safeDiv(bud,vw))}</span></div>
       </div>
     </div>`;
   };
@@ -2749,7 +2749,7 @@ function renderVideoCharts(rows){
         <td class="px-3 py-2 text-right tabular-nums font-semibold bg-violet-50 text-violet-700">${fmtINRExact(d.bud)}</td>
         <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.vw)}</td>
         <td class="px-3 py-2 text-right tabular-nums text-sky-600">${fmtNum(d.tr)}</td>
-        <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${d.vw > 0 ? fmtINR(d.cpv) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${d.vw > 0 ? "₹" + fmtDecimal(d.cpv) : "—"}</td>
       </tr>`;
     }).join("");
     if (sbTfoot) {
@@ -2763,7 +2763,7 @@ function renderVideoCharts(rows){
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${fmtINRExact(tBud)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tVw)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold text-sky-600">${fmtNum(tTr)}</td>
-        <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${tVw > 0 ? fmtINR(safeDiv(tBud,tVw)) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${tVw > 0 ? "₹" + fmtDecimal(safeDiv(tBud,tVw)) : "—"}</td>
       </tr>`;
     }
   }
