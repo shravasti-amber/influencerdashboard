@@ -1052,9 +1052,16 @@ function upsertChart(id, config){
   state.charts[id] = new Chart(ctx, config);
 }
 function cursorHover(){ return (e, els) => { if (e.native && e.native.target) e.native.target.style.cursor = els.length ? "pointer" : "default"; }; }
-function counts(rows, key){
+function counts(rows, key, includeEmpty = false){
   const c = new Map();
-  for (const r of rows){ const v=r[key]; if (!v||v==="—") continue; c.set(v,(c.get(v)||0)+1); }
+  for (const r of rows){ 
+    let v = r[key];
+    if (!v || v === "—") {
+      if (!includeEmpty) continue;
+      v = "—";
+    }
+    c.set(v, (c.get(v) || 0) + 1); 
+  }
   return [...c.entries()].sort((a,b)=>b[1]-a[1]);
 }
 
@@ -1180,7 +1187,7 @@ function renderChannelOnboardedTable(rows){
 
   // Onboarded = Live + WIP
   const onboardedRows = rows.filter(r => r.status === "Onboarded — Live" || r.status === "Onboarding WIP");
-  const platformCurrent = counts(onboardedRows,"platform");
+  const platformCurrent = counts(onboardedRows, "platform", true);
 
   if (state.channelOnbView === "count"){
     if (head_co) head_co.innerHTML = `<th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">Onboarded</th>`;
@@ -1303,7 +1310,7 @@ function renderProspectCharts(rows){
   });
   // month trend
   const monthCounts = counts(rows,"month").sort((a,b)=>monthSortKey(a[0])-monthSortKey(b[0]));
-  const monthOnb = monthCounts.map(([m]) => rows.filter(r => r.month===m && r.status==="Onboarded — Live").length);
+  const monthOnb = monthCounts.map(([m]) => rows.filter(r => r.month===m && (r.status==="Onboarded — Live" || r.status==="Onboarding WIP")).length);
   upsertChart("ch-month", {
     type:"bar",
     data:{ labels:monthCounts.map(m=>m[0]), datasets:[
@@ -2133,7 +2140,7 @@ function renderVpChannelOnboarded(rows){
   if (state.vpChannelView === "count"){
     if (thead) thead.innerHTML = `<tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">Onboarded</th></tr>`;
     const onbRows = rows.filter(isOnb);
-    const platCounts = counts(onbRows,"platform");
+    const platCounts = counts(onbRows,"platform", true);
     const grand = platCounts.reduce((s,p)=>s+p[1],0);
     tbody.innerHTML = platCounts.map(([p,n])=>`<tr class="hover:bg-zinc-50"><td class="px-3 py-2">${escapeHtml(p)}</td><td class="px-3 py-2 text-right tabular-nums font-medium">${n}</td></tr>`).join("");
     if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300"><td class="px-3 py-2">Grand Total</td><td class="px-3 py-2 text-right tabular-nums font-bold">${grand}</td></tr>`;
@@ -2142,8 +2149,8 @@ function renderVpChannelOnboarded(rows){
     if (thead) thead.innerHTML = `<tr><th class="px-3 py-2 text-left">Platform</th><th class="px-3 py-2 text-right">${escapeHtml(prevMonth||"—")}</th><th class="px-3 py-2 text-right">${escapeHtml(curMonth||"Current")}</th><th class="px-3 py-2 text-right">MoM %</th></tr>`;
     const prevOnb = allRows.filter(r => r.month===prevMonth && isOnb(r));
     const curOnb  = allRows.filter(r => r.month===curMonth  && isOnb(r));
-    const prevMap = new Map(counts(prevOnb,"platform"));
-    const curMap  = new Map(counts(curOnb,"platform"));
+    const prevMap = new Map(counts(prevOnb,"platform", true));
+    const curMap  = new Map(counts(curOnb,"platform", true));
     const plats = [...new Set([...prevMap.keys(),...curMap.keys()])].sort();
     tbody.innerHTML = plats.map(p => {
       const prev=prevMap.get(p)||0, cur=curMap.get(p)||0;
