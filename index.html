@@ -223,7 +223,7 @@
       </div>
     </section>
 
-    <section id="kpi-row-videos" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3"></section>
+    <section id="kpi-row-videos" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3"></section>
 
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
@@ -2541,6 +2541,7 @@ function renderVideoKPIs(rows){
     { label:"Videos live", value: videosLive.toLocaleString(), sub:`${crossPosted} cross-posted` },
     { label:"Total spend", value: fmtINR(budget), sub:`${paidRows.length} paid videos` },
     { label:"Views", value: fmtNum(views), sub:`CPV ₹${fmtDecimal(cpv)}` },
+    { label:"Avg Views / Video", value: fmtNum(rows.length > 0 ? views / rows.length : 0), sub:`across ${rows.length} videos` },
     { label:"Traffic", value: fmtNum(traffic), sub: views && leads ? ((leads/traffic)*100).toFixed(2)+"% of traffic → leads" : "" },
     { label:"Leads", value: fmtNum(leads), sub:`CPL ${fmtINR(cpl)}`, color:"text-emerald-600" },
     { label:"Bookforms", value: fmtNum(bookforms), sub:`CPB ${fmtINR(cpb)}` },
