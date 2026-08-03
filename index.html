@@ -264,9 +264,13 @@
                 <th class="px-3 py-2 text-left">Source Country</th>
                 <th class="px-3 py-2 text-right">Videos</th>
                 <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Budget Spent</th>
+                <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Avg Spend</th>
                 <th class="px-3 py-2 text-right">Views</th>
                 <th class="px-3 py-2 text-right">Traffic</th>
+                <th class="px-3 py-2 text-right">Bookforms</th>
+                <th class="px-3 py-2 text-right">Bookings</th>
                 <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">CPV</th>
+                <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">CPBF</th>
               </tr>
             </thead>
             <tbody id="tbl-src-budget-tbody" class="divide-y divide-zinc-100"></tbody>
@@ -288,11 +292,15 @@
               <tr>
                 <th class="px-3 py-2 text-left">Content Type</th>
                 <th class="px-3 py-2 text-right">Videos</th>
+                <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Spend</th>
+                <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Avg Spend</th>
                 <th class="px-3 py-2 text-right">Views</th>
                 <th class="px-3 py-2 text-right">Traffic</th>
                 <th class="px-3 py-2 text-right text-emerald-700 bg-emerald-50">Leads</th>
-                <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Spend</th>
+                <th class="px-3 py-2 text-right text-emerald-700 bg-emerald-50">Bookforms</th>
+                <th class="px-3 py-2 text-right text-emerald-700 bg-emerald-50">Bookings</th>
                 <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">CPL</th>
+                <th class="px-3 py-2 text-right text-yellow-700 bg-yellow-50">CPBF</th>
               </tr>
             </thead>
             <tbody id="tbl-content-type-tbody" class="divide-y divide-zinc-100"></tbody>
@@ -2534,7 +2542,8 @@ function renderVideoKPIs(rows){
   const bookings = sumField(rows,"bookings");
   const cpv = safeDiv(budget,views);
   const cpl = safeDiv(budget,leads);
-  const cpb = safeDiv(budget,bookforms);
+  const cpbf = safeDiv(budget,bookforms);
+  const cpb = safeDiv(budget,bookings);
   const videosLive = rows.filter(r => !r.isCrossPosted).length;
   const crossPosted = rows.filter(r => r.isCrossPosted).length;
   const k = [
@@ -2544,8 +2553,8 @@ function renderVideoKPIs(rows){
     { label:"Avg Views / Video", value: fmtNum(rows.length > 0 ? views / rows.length : 0), sub:`across ${rows.length} videos` },
     { label:"Traffic", value: fmtNum(traffic), sub: views && leads ? ((leads/traffic)*100).toFixed(2)+"% of traffic → leads" : "" },
     { label:"Leads", value: fmtNum(leads), sub:`CPL ${fmtINR(cpl)}`, color:"text-emerald-600" },
-    { label:"Bookforms", value: fmtNum(bookforms), sub:`CPB ${fmtINR(cpb)}` },
-    { label:"Bookings", value: fmtNum(bookings), sub: bookforms? ((bookings/bookforms)*100).toFixed(1)+"% of bookforms" : "", color:"text-indigo-600" },
+    { label:"Bookforms", value: fmtNum(bookforms), sub:`CPBF ${fmtINR(cpbf)}` },
+    { label:"Bookings", value: fmtNum(bookings), sub:`CPB ${fmtINR(cpb)} · ` + (bookforms? ((bookings/bookforms)*100).toFixed(1)+"% of bookforms" : ""), color:"text-indigo-600" },
   ];
   document.getElementById("kpi-row-videos").innerHTML = k.map(x => `
     <div class="bg-white rounded-xl border border-zinc-200 p-4">
@@ -2585,14 +2594,37 @@ function renderVideoCharts(rows){
   const affRows  = rows.filter(r=>r.paidAff==="Affiliate");
   const card = (title, rs, color) => {
     const bud = sumField(rs,"budget"), vw=sumField(rs,"views"), tr=sumField(rs,"traffic"), ld=sumField(rs,"leads");
+    const bf = sumField(rs,"bookforms"), bk=sumField(rs,"bookings");
+    const isPaid = title === "Paid";
+    const avgSpend = rs.length > 0 ? safeDiv(bud, rs.length) : 0;
+    
+    let extras = "";
+    if (isPaid) {
+       extras = `
+        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-medium">₹${fmtDecimal(safeDiv(bud,vw))}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">CPL</span><span class="font-medium">${fmtINR(safeDiv(bud,ld))}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">CPBF</span><span class="font-medium">${fmtINR(safeDiv(bud,bf))}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">CPB</span><span class="font-medium">${fmtINR(safeDiv(bud,bk))}</span></div>
+       `;
+    } else {
+       // Just CPV for affiliate, though budget is usually 0
+       extras = `
+        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-medium">₹${fmtDecimal(safeDiv(bud,vw))}</span></div>
+       `;
+    }
+
     return `<div class="bg-zinc-50 rounded-lg p-3 border border-zinc-200">
       <div class="text-[11px] uppercase tracking-wide font-semibold ${color}">${title}</div>
       <div class="text-xl font-bold mt-1">${rs.length} videos</div>
       <div class="mt-2 space-y-0.5 text-xs">
         <div class="flex justify-between"><span class="text-zinc-500">Spend</span><span class="font-medium">${fmtINRExact(bud)}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Views</span><span class="font-medium">${fmtNum(vw)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Avg Spend</span><span class="font-medium">${fmtINR(avgSpend)}</span></div>
+        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">Views</span><span class="font-medium">${fmtNum(vw)}</span></div>
         <div class="flex justify-between"><span class="text-zinc-500">Traffic</span><span class="font-medium">${fmtNum(tr)}</span></div>
-        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-medium">₹${fmtDecimal(safeDiv(bud,vw))}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Leads</span><span class="font-medium">${fmtNum(ld)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Bookforms</span><span class="font-medium">${fmtNum(bf)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Bookings</span><span class="font-medium">${fmtNum(bk)}</span></div>
+        ${extras}
       </div>
     </div>`;
   };
@@ -2638,19 +2670,25 @@ function renderVideoCharts(rows){
   const tbl = document.getElementById("tbl-channel-eff");
   tbl.innerHTML = `
     <thead class="bg-zinc-50 text-zinc-600 uppercase tracking-wide">
-      <tr><th class="px-2 py-2 text-left">Channel</th><th class="px-2 py-2 text-right">Videos</th><th class="px-2 py-2 text-right">Spend</th><th class="px-2 py-2 text-right">Views</th><th class="px-2 py-2 text-right">Leads</th><th class="px-2 py-2 text-right">CPV</th><th class="px-2 py-2 text-right">CPL</th><th class="px-2 py-2 text-right">CPB</th></tr>
+      <tr><th class="px-2 py-2 text-left">Channel</th><th class="px-2 py-2 text-right">Videos</th><th class="px-2 py-2 text-right">Spend</th><th class="px-2 py-2 text-right">Avg Spend</th><th class="px-2 py-2 text-right">Views</th><th class="px-2 py-2 text-right">Leads</th><th class="px-2 py-2 text-right">Bookforms</th><th class="px-2 py-2 text-right">Bookings</th><th class="px-2 py-2 text-right">CPV</th><th class="px-2 py-2 text-right">CPL</th><th class="px-2 py-2 text-right">CPBF</th><th class="px-2 py-2 text-right">CPB</th></tr>
     </thead><tbody class="divide-y divide-zinc-100">
     ${chData.map(c => {
       const bf = sumField(rows.filter(r=>r.channel===c.ch),"bookforms");
+      const bk = sumField(rows.filter(r=>r.channel===c.ch),"bookings");
+      const avgBud = c.n > 0 ? safeDiv(c.bud, c.n) : 0;
       return `<tr>
         <td class="px-2 py-2 font-medium">${escapeHtml(c.ch)}</td>
         <td class="px-2 py-2 text-right">${c.n}</td>
         <td class="px-2 py-2 text-right">${fmtINR(c.bud)}</td>
+        <td class="px-2 py-2 text-right">${fmtINR(avgBud)}</td>
         <td class="px-2 py-2 text-right">${fmtNum(c.vw)}</td>
         <td class="px-2 py-2 text-right">${fmtNum(c.ld)}</td>
+        <td class="px-2 py-2 text-right">${fmtNum(bf)}</td>
+        <td class="px-2 py-2 text-right">${fmtNum(bk)}</td>
         <td class="px-2 py-2 text-right">₹${fmtDecimal(safeDiv(c.bud,c.vw))}</td>
         <td class="px-2 py-2 text-right">${fmtINR(safeDiv(c.bud,c.ld))}</td>
         <td class="px-2 py-2 text-right">${fmtINR(safeDiv(c.bud,bf))}</td>
+        <td class="px-2 py-2 text-right">${fmtINR(safeDiv(c.bud,bk))}</td>
       </tr>`; }).join("")}
     </tbody>`;
 
@@ -2735,14 +2773,16 @@ function renderVideoCharts(rows){
   for (const r of rows) {
     if (r.paidAff !== "Paid") continue; // Count only paid videos
     const key = r.source && r.source !== "—" ? r.source : "(not specified)";
-    if (!srcBudget[key]) srcBudget[key] = { n:0, bud:0, vw:0, ld:0, tr:0 };
+    if (!srcBudget[key]) srcBudget[key] = { n:0, bud:0, vw:0, ld:0, tr:0, bf:0, bk:0 };
     srcBudget[key].n++;
     srcBudget[key].bud += (r.budget || 0);
     srcBudget[key].vw  += (r.views  || 0);
     srcBudget[key].tr  += (r.traffic|| 0);
+    srcBudget[key].bf  += (r.bookforms|| 0);
+    srcBudget[key].bk  += (r.bookings|| 0);
   }
   const srcBudgetRows = Object.entries(srcBudget)
-    .map(([src, d]) => ({ src, ...d, cpv: safeDiv(d.bud, d.vw) }))
+    .map(([src, d]) => ({ src, ...d, cpv: safeDiv(d.bud, d.vw), cpbf: safeDiv(d.bud, d.bf) }))
     .filter(d => d.bud > 0)
     .sort((a, b) => b.bud - a.bud);
 
@@ -2755,9 +2795,13 @@ function renderVideoCharts(rows){
         <td class="px-3 py-2 font-medium">${escapeHtml(d.src)}</td>
         <td class="px-3 py-2 text-right tabular-nums text-zinc-500">${d.n}</td>
         <td class="px-3 py-2 text-right tabular-nums font-semibold bg-violet-50 text-violet-700">${fmtINRExact(d.bud)}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-violet-50 text-violet-700">${fmtINR(safeDiv(d.bud, d.n))}</td>
         <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.vw)}</td>
         <td class="px-3 py-2 text-right tabular-nums text-sky-600">${fmtNum(d.tr)}</td>
+        <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.bf)}</td>
+        <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.bk)}</td>
         <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${d.vw > 0 ? "₹" + fmtDecimal(d.cpv) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${fmtINR(d.cpbf)}</td>
       </tr>`;
     }).join("");
     if (sbTfoot) {
@@ -2765,13 +2809,19 @@ function renderVideoCharts(rows){
       const tBud = srcBudgetRows.reduce((s,d)=>s+d.bud, 0);
       const tVw  = srcBudgetRows.reduce((s,d)=>s+d.vw,  0);
       const tTr  = srcBudgetRows.reduce((s,d)=>s+d.tr,  0);
+      const tBf  = srcBudgetRows.reduce((s,d)=>s+d.bf,  0);
+      const tBk  = srcBudgetRows.reduce((s,d)=>s+d.bk,  0);
       sbTfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
         <td class="px-3 py-2 font-bold">Grand Total</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold text-zinc-500">${tN}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${fmtINRExact(tBud)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${fmtINR(safeDiv(tBud, tN))}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tVw)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold text-sky-600">${fmtNum(tTr)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tBf)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tBk)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${tVw > 0 ? "₹" + fmtDecimal(safeDiv(tBud,tVw)) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${fmtINR(safeDiv(tBud,tBf))}</td>
       </tr>`;
     }
   }
@@ -2797,16 +2847,18 @@ function renderVideoCharts(rows){
   const ctData = {};
   for (const r of rows) {
     const key = canonicalCT(r.contentType);
-    if (!ctData[key]) ctData[key] = { n:0, vw:0, tr:0, ld:0, bud:0 };
+    if (!ctData[key]) ctData[key] = { n:0, vw:0, tr:0, ld:0, bud:0, bf:0, bk:0 };
     ctData[key].n++;
     ctData[key].vw  += (r.views   || 0);
     ctData[key].tr  += (r.traffic || 0);
     ctData[key].ld  += (r.leads   || 0);
     ctData[key].bud += (r.budget  || 0);
+    ctData[key].bf  += (r.bookforms || 0);
+    ctData[key].bk  += (r.bookings  || 0);
   }
   // Sort: by leads desc (most impactful first), with (not specified) always last
   const ctRows = Object.entries(ctData)
-    .map(([type, d]) => ({ type, ...d, cpl: safeDiv(d.bud, d.ld) }))
+    .map(([type, d]) => ({ type, ...d, cpl: safeDiv(d.bud, d.ld), cpbf: safeDiv(d.bud, d.bf) }))
     .sort((a, b) => {
       if (a.type === "(not specified)") return 1;
       if (b.type === "(not specified)") return -1;
@@ -2821,11 +2873,15 @@ function renderVideoCharts(rows){
       return `<tr class="hover:bg-indigo-50 ${z}">
         <td class="px-3 py-2 font-medium">${escapeHtml(d.type)}</td>
         <td class="px-3 py-2 text-right tabular-nums text-zinc-500">${d.n}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-violet-50 text-violet-700">${d.bud > 0 ? fmtINR(d.bud) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-violet-50 text-violet-700">${d.n > 0 ? fmtINR(safeDiv(d.bud, d.n)) : "—"}</td>
         <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.vw)}</td>
         <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.tr)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-semibold bg-emerald-50 text-emerald-700">${fmtNum(d.ld)}</td>
-        <td class="px-3 py-2 text-right tabular-nums bg-violet-50 text-violet-700">${d.bud > 0 ? fmtINR(d.bud) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-semibold bg-emerald-50 text-emerald-700">${fmtNum(d.bf)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-semibold bg-emerald-50 text-emerald-700">${fmtNum(d.bk)}</td>
         <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${d.ld > 0 ? fmtINR(d.cpl) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700">${d.bf > 0 ? fmtINR(d.cpbf) : "—"}</td>
       </tr>`;
     }).join("");
     if (ctTfoot) {
@@ -2834,14 +2890,20 @@ function renderVideoCharts(rows){
       const tTr  = ctRows.reduce((s,d)=>s+d.tr,  0);
       const tLd  = ctRows.reduce((s,d)=>s+d.ld,  0);
       const tBud = ctRows.reduce((s,d)=>s+d.bud, 0);
+      const tBf  = ctRows.reduce((s,d)=>s+d.bf,  0);
+      const tBk  = ctRows.reduce((s,d)=>s+d.bk,  0);
       ctTfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
         <td class="px-3 py-2 font-bold">Grand Total</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold text-zinc-500">${tN}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${tBud > 0 ? fmtINR(tBud) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${tN > 0 ? fmtINR(safeDiv(tBud, tN)) : "—"}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tVw)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tTr)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-emerald-50 text-emerald-700">${fmtNum(tLd)}</td>
-        <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${tBud > 0 ? fmtINR(tBud) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-emerald-50 text-emerald-700">${fmtNum(tBf)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-emerald-50 text-emerald-700">${fmtNum(tBk)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${tLd > 0 ? fmtINR(safeDiv(tBud,tLd)) : "—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${tBf > 0 ? fmtINR(safeDiv(tBud,tBf)) : "—"}</td>
       </tr>`;
     }
   }
