@@ -329,6 +329,40 @@
         <div class="h-[320px]"><canvas id="vch-dest"></canvas></div>
       </div>
 
+      <!-- Unique Influencers Over Time -->
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
+        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Unique Influencers over time</h3><span class="text-xs text-zinc-500">monthly trend</span></div>
+        <div class="h-[340px]"><canvas id="vch-unique-trend"></canvas></div>
+      </div>
+
+      <!-- Influencer Performance Leaderboard -->
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="font-semibold text-sm">Influencer Leaderboard</h3>
+            <p class="text-xs text-zinc-500 mt-0.5">performance by unique influencer · aggregated across all activities</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto max-h-[500px] overflow-y-auto relative">
+          <table class="w-full text-xs">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px] sticky top-0 shadow-sm z-10">
+              <tr>
+                <th class="px-3 py-2 text-left bg-zinc-50">Influencer (Partner)</th>
+                <th class="px-3 py-2 text-right bg-zinc-50">Activities</th>
+                <th class="px-3 py-2 text-right bg-zinc-50">Views</th>
+                <th class="px-3 py-2 text-right bg-zinc-50">Traffic</th>
+                <th class="px-3 py-2 text-right text-emerald-700 bg-emerald-50">Leads</th>
+                <th class="px-3 py-2 text-right text-emerald-700 bg-emerald-50">Bookforms</th>
+                <th class="px-3 py-2 text-right text-emerald-700 bg-emerald-50">Bookings</th>
+                <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Spend</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-influencer-tbody" class="divide-y divide-zinc-100"></tbody>
+            <tfoot id="tbl-influencer-tfoot" class="bg-zinc-50 font-semibold sticky bottom-0 shadow-sm z-10"></tfoot>
+          </table>
+        </div>
+      </div>
+
       <!-- Video progress tracker -->
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
         <div class="flex items-center justify-between mb-1">
@@ -2904,6 +2938,96 @@ function renderVideoCharts(rows){
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-emerald-50 text-emerald-700">${fmtNum(tBk)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${tLd > 0 ? fmtINR(safeDiv(tBud,tLd)) : "—"}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${tBf > 0 ? fmtINR(safeDiv(tBud,tBf)) : "—"}</td>
+      </tr>`;
+    }
+  }
+
+  // ── Unique Influencers Over Time (Trend) ──
+  const uniqueTrendData = months.map(m => {
+    const sub = rows.filter(r => r.month === m);
+    const uniquePartners = new Set(sub.map(r => r.partner).filter(Boolean));
+    return {
+      m,
+      uniqueCount: uniquePartners.size,
+      vw: sumField(sub, "views"),
+      tr: sumField(sub, "traffic"),
+      ld: sumField(sub, "leads")
+    };
+  });
+  
+  upsertChart("vch-unique-trend", {
+    type: "bar",
+    data: {
+      labels: uniqueTrendData.map(d => d.m),
+      datasets: [
+        { type: "bar", label: "Unique Influencers", data: uniqueTrendData.map(d => d.uniqueCount), backgroundColor: "#f43f5e", yAxisID: "y" },
+        { type: "line", label: "Views", data: uniqueTrendData.map(d => d.vw), borderColor: "#8b5cf6", backgroundColor: "#8b5cf6", yAxisID: "y2", tension: 0.3 },
+        { type: "line", label: "Traffic", data: uniqueTrendData.map(d => d.tr), borderColor: "#0ea5e9", backgroundColor: "#0ea5e9", yAxisID: "y2", tension: 0.3, hidden: true },
+        { type: "line", label: "Leads", data: uniqueTrendData.map(d => d.ld), borderColor: "#10b981", backgroundColor: "#10b981", yAxisID: "y2", tension: 0.3, hidden: true }
+      ]
+    },
+    options: {
+      plugins: { legend: { position: "bottom" } },
+      scales: {
+        y: { position: "left", title: { display: true, text: "Unique Influencers" }, beginAtZero: true },
+        y2: { position: "right", title: { display: true, text: "Performance Metric" }, grid: { drawOnChartArea: false }, beginAtZero: true }
+      },
+      onClick: chartClickFilter("videos", "month", "filters-videos"), onHover: cursorHover()
+    }
+  });
+
+  // ── Influencer Performance Leaderboard ──
+  const infAgg = new Map();
+  for (const r of rows) {
+    if (!r.partner || r.partner === "—") continue;
+    const cur = infAgg.get(r.partner) || { n:0, vw:0, tr:0, ld:0, bf:0, bk:0, bud:0 };
+    cur.n++;
+    cur.vw += (r.views || 0);
+    cur.tr += (r.traffic || 0);
+    cur.ld += (r.leads || 0);
+    cur.bf += (r.bookforms || 0);
+    cur.bk += (r.bookings || 0);
+    cur.bud += (r.budget || 0);
+    infAgg.set(r.partner, cur);
+  }
+  
+  const infRows = [...infAgg.entries()].map(([partner, d]) => ({ partner, ...d })).sort((a,b) => b.vw - a.vw);
+  
+  const infTbody = document.getElementById("tbl-influencer-tbody");
+  const infTfoot = document.getElementById("tbl-influencer-tfoot");
+  if (infTbody) {
+    infTbody.innerHTML = infRows.map((d, idx) => {
+      const z = idx % 2 === 0 ? "" : "bg-zinc-50/60";
+      return `<tr class="hover:bg-indigo-50 ${z}">
+        <td class="px-3 py-2 font-medium">${escapeHtml(d.partner)}</td>
+        <td class="px-3 py-2 text-right tabular-nums text-zinc-500">${d.n}</td>
+        <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.vw)}</td>
+        <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.tr)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-semibold bg-emerald-50 text-emerald-700">${fmtNum(d.ld)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-semibold bg-emerald-50 text-emerald-700">${fmtNum(d.bf)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-semibold bg-emerald-50 text-emerald-700">${fmtNum(d.bk)}</td>
+        <td class="px-3 py-2 text-right tabular-nums bg-violet-50 text-violet-700">${d.bud > 0 ? fmtINR(d.bud) : "—"}</td>
+      </tr>`;
+    }).join("");
+    
+    if (infTfoot) {
+      const tN   = infRows.reduce((s,d) => s+d.n, 0);
+      const tVw  = infRows.reduce((s,d) => s+d.vw, 0);
+      const tTr  = infRows.reduce((s,d) => s+d.tr, 0);
+      const tLd  = infRows.reduce((s,d) => s+d.ld, 0);
+      const tBf  = infRows.reduce((s,d) => s+d.bf, 0);
+      const tBk  = infRows.reduce((s,d) => s+d.bk, 0);
+      const tBud = infRows.reduce((s,d) => s+d.bud, 0);
+      
+      infTfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
+        <td class="px-3 py-2 font-bold">Grand Total (${infRows.length} Unique Influencers)</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold text-zinc-500">${tN}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tVw)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tTr)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-emerald-50 text-emerald-700">${fmtNum(tLd)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-emerald-50 text-emerald-700">${fmtNum(tBf)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-emerald-50 text-emerald-700">${fmtNum(tBk)}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${tBud > 0 ? fmtINR(tBud) : "—"}</td>
       </tr>`;
     }
   }
