@@ -235,7 +235,7 @@
 
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5 flex flex-col">
         <div class="flex items-center justify-between mb-2 w-full"><h3 class="font-semibold text-sm">Funnel: Views → Bookings</h3><span class="text-xs text-zinc-500">drop-off at each step</span></div>
-        <div id="funnel-html" class="py-1 w-full"></div>
+        <div id="funnel-html" class="space-y-2 py-2 w-full"></div>
       </div>
 
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-7 flex flex-col">
@@ -604,6 +604,12 @@
 /* =========================================================
    AMBER INFLUENCER DASHBOARD — multi-sheet xlsx version
    ========================================================= */
+// Register datalabels globally, defaulting to hidden on all charts
+if (window.ChartDataLabels) {
+  Chart.register(window.ChartDataLabels);
+  Chart.defaults.plugins.datalabels = { display: false };
+}
+
 
 const SAMPLE_XLSX = "Interns Influencer _prospects Tracker .xlsx";
 const SAMPLE_CSV = "Interns Influencer _prospects Tracker  - Master prospect.csv";
@@ -1137,13 +1143,8 @@ function renderActiveChips(tab, hostId, totalRows){
 function upsertChart(id, config){
   if (state.charts[id]) state.charts[id].destroy();
   const ctx = document.getElementById(id); if (!ctx) return;
-  const base = { responsive:true, maintainAspectRatio:false, animation:{duration:250}, plugins:{legend:{display:false}, datalabels:{display:false}} };
+  const base = { responsive:true, maintainAspectRatio:false, animation:{duration:250}, plugins:{legend:{display:false}} };
   config.options = Object.assign({}, base, config.options || {});
-  // Ensure we register the datalabels plugin if it's not already
-  if (window.ChartDataLabels) {
-    if (!config.plugins) config.plugins = [];
-    if (!config.plugins.includes(window.ChartDataLabels)) config.plugins.push(window.ChartDataLabels);
-  }
   state.charts[id] = new Chart(ctx, config);
 }
 function cursorHover(){ return (e, els) => { if (e.native && e.native.target) e.native.target.style.cursor = els.length ? "pointer" : "default"; }; }
@@ -2664,28 +2665,19 @@ function renderVideoCharts(rows){
     { name:"Bookings", n:bk, color:"#ec4899" },
   ];
   const maxN = stages[0].n || 1;
-  // Build a proper labeled trapezoid funnel (label + number inside each band)
-  document.getElementById("funnel-html").innerHTML = `<div class="w-full space-y-0.5">${stages.map((s,i) => {
+  document.getElementById("funnel-html").innerHTML = stages.map((s,i) => {
     const prev = i>0 ? stages[i-1].n : null;
-    const pctOfTop = Math.max((s.n / maxN) * 100, 12);
-    const nextPct  = i < stages.length-1 ? Math.max((stages[i+1].n / maxN) * 100, 12) : Math.max(pctOfTop * 0.7, 12);
-    const drop = prev!=null ? ((s.n / prev) * 100).toFixed(1) + "% of prev" : "";
-    // Trapezoid: wider at top, narrower at bottom
-    const tl = ((100 - pctOfTop) / 2).toFixed(2);
-    const tr = (100 - parseFloat(tl)).toFixed(2);
-    const bl = ((100 - nextPct) / 2).toFixed(2);
-    const br = (100 - parseFloat(bl)).toFixed(2);
-    const clip = `polygon(${tl}% 0%, ${tr}% 0%, ${br}% 100%, ${bl}% 100%)`;
+    const pctOfTop = ((s.n / maxN) * 100).toFixed(1);
+    const drop = prev!=null ? ((s.n / prev) * 100).toFixed(2) + "% step" : "";
     return `
-      <div class="relative w-full" style="height:46px;">
-        <div style="clip-path:${clip}; background:${s.color}; height:100%; width:100%; opacity:0.9; position:absolute; top:0; left:0;"></div>
-        <div style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; gap:8px; pointer-events:none;">
-          <span style="color:white; font-size:12px; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,0.4);">${s.name}</span>
-          <span style="color:rgba(255,255,255,0.9); font-size:11px; font-weight:400;">${fmtNum(s.n)}${drop ? ' · '+drop : ''}</span>
+      <div>
+        <div class="flex items-center justify-between text-xs mb-1">
+          <span class="font-medium">${s.name}: <span class="tabular-nums">${fmtNum(s.n)}</span></span>
+          <span class="text-zinc-500">${drop}</span>
         </div>
+        <div class="funnel-bar" style="width:${Math.max(pctOfTop,1)}%; background:${s.color};"></div>
       </div>`;
-  }).join("")}</div>`;
-
+  }).join("");
   // ----- Paid vs Affiliate cards -----
   const paidRows = rows.filter(r=>r.paidAff==="Paid");
   const affRows  = rows.filter(r=>r.paidAff==="Affiliate");
