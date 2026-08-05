@@ -52,6 +52,11 @@
   #vp-ch-onb-tbody tr:hover { background-color: #eef2ff !important; }
   #vp-table4-tbody tr:nth-child(even) { background-color: #f8f8fa; }
   #vp-table4-tbody tr:hover { background-color: #eef2ff !important; }
+  /* Thin, semi-transparent scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(113,113,122,0.25); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(113,113,122,0.45); }
 </style>
 </head>
 <body class="bg-zinc-50 text-zinc-900">
@@ -230,7 +235,7 @@
 
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5 flex flex-col">
         <div class="flex items-center justify-between mb-2 w-full"><h3 class="font-semibold text-sm">Funnel: Views → Bookings</h3><span class="text-xs text-zinc-500">drop-off at each step</span></div>
-        <div id="funnel-html" class="space-y-2 py-2 flex flex-col items-center w-full"></div>
+        <div id="funnel-html" class="py-1 w-full"></div>
       </div>
 
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-7 flex flex-col">
@@ -2581,8 +2586,8 @@ const VIDEO_FILTERS = {
   poc:        { label:"POC", field:"poc", set:null },
   month:      { label:"Month", field:"month", set:null, sort:(a,b)=>monthSortKey(a)-monthSortKey(b) },
   channel:    { label:"Channel", field:"channel", set:null },
-  destination:{ label:"Destination", field:"destination", set:null },
   source:     { label:"Source Country", field:"source", set:null },
+  destination:{ label:"Destination Country", field:"destination", set:null },
   paidAff:    { label:"Paid / Affiliate", field:"paidAff", set:null },
 };
 
@@ -2659,27 +2664,27 @@ function renderVideoCharts(rows){
     { name:"Bookings", n:bk, color:"#ec4899" },
   ];
   const maxN = stages[0].n || 1;
-  // Build a proper tapered funnel using clip-path trapezoids
-  document.getElementById("funnel-html").innerHTML = stages.map((s,i) => {
+  // Build a proper labeled trapezoid funnel (label + number inside each band)
+  document.getElementById("funnel-html").innerHTML = `<div class="w-full space-y-0.5">${stages.map((s,i) => {
     const prev = i>0 ? stages[i-1].n : null;
-    const pctOfTop = Math.max((s.n / maxN) * 100, 4);
-    const nextPct  = i < stages.length-1 ? Math.max((stages[i+1].n / maxN) * 100, 4) : pctOfTop;
+    const pctOfTop = Math.max((s.n / maxN) * 100, 12);
+    const nextPct  = i < stages.length-1 ? Math.max((stages[i+1].n / maxN) * 100, 12) : Math.max(pctOfTop * 0.7, 12);
     const drop = prev!=null ? ((s.n / prev) * 100).toFixed(1) + "% of prev" : "";
-    // Trapezoid via clip-path: top width = pctOfTop, bottom width = nextPct, centred
+    // Trapezoid: wider at top, narrower at bottom
     const tl = ((100 - pctOfTop) / 2).toFixed(2);
     const tr = (100 - parseFloat(tl)).toFixed(2);
     const bl = ((100 - nextPct) / 2).toFixed(2);
     const br = (100 - parseFloat(bl)).toFixed(2);
     const clip = `polygon(${tl}% 0%, ${tr}% 0%, ${br}% 100%, ${bl}% 100%)`;
     return `
-      <div class="w-full">
-        <div style="clip-path:${clip}; background:${s.color}; height:28px; width:100%; opacity:0.85;"></div>
-        <div class="flex items-center justify-between text-xs mt-0.5 px-1">
-          <span class="text-zinc-700">${s.name}: <span class="tabular-nums font-medium">${fmtNum(s.n)}</span></span>
-          <span class="text-zinc-400 text-[10px]">${drop}</span>
+      <div class="relative w-full" style="height:46px;">
+        <div style="clip-path:${clip}; background:${s.color}; height:100%; width:100%; opacity:0.9; position:absolute; top:0; left:0;"></div>
+        <div style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; gap:8px; pointer-events:none;">
+          <span style="color:white; font-size:12px; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,0.4);">${s.name}</span>
+          <span style="color:rgba(255,255,255,0.9); font-size:11px; font-weight:400;">${fmtNum(s.n)}${drop ? ' · '+drop : ''}</span>
         </div>
       </div>`;
-  }).join("");
+  }).join("")}</div>`;
 
   // ----- Paid vs Affiliate cards -----
   const paidRows = rows.filter(r=>r.paidAff==="Paid");
@@ -2834,12 +2839,8 @@ function renderVideoCharts(rows){
       { label:"Traffic", data:sourceData.map(s=>s.tr), backgroundColor:"#0ea5e9" },
       { label:"Leads", data:sourceData.map(s=>s.ld), backgroundColor:"#10b981" },
     ]},
-    options:{ 
-      layout: { padding: { top: 20 } },
-      plugins:{ legend:{position:"bottom"}, datalabels:{ display:true, anchor:'end', align:'end', formatter: (v)=>fmtNum(v), font:{size:10, weight:'bold'}, color:'#4b5563' } }, 
-      scales:{ y:{beginAtZero:true} },
-      onClick: chartClickFilter("videos","source","filters-videos"), onHover: cursorHover() 
-    },
+    options:{ plugins:{ legend:{position:"bottom"} }, scales:{ y:{beginAtZero:true} },
+      onClick: chartClickFilter("videos","source","filters-videos"), onHover: cursorHover() },
   });
 
   // ----- Destination -> traffic + leads -----
@@ -2857,12 +2858,8 @@ function renderVideoCharts(rows){
       { label:"Traffic", data:destData.map(d=>d.tr), backgroundColor:"#0ea5e9" },
       { label:"Leads", data:destData.map(d=>d.ld), backgroundColor:"#10b981" },
     ]},
-    options:{ 
-      layout: { padding: { top: 20 } },
-      plugins:{ legend:{position:"bottom"}, datalabels:{ display:true, anchor:'end', align:'end', formatter: (v)=>fmtNum(v), font:{size:10, weight:'bold'}, color:'#4b5563' } }, 
-      scales:{ y:{beginAtZero:true} },
-      onClick: chartClickFilter("videos","destination","filters-videos"), onHover: cursorHover() 
-    },
+    options:{ plugins:{ legend:{position:"bottom"} }, scales:{ y:{beginAtZero:true} },
+      onClick: chartClickFilter("videos","destination","filters-videos"), onHover: cursorHover() },
   });
   // ── Source Country VS Budget Spent ──
   const srcBudget = {};
