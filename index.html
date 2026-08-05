@@ -6,6 +6,7 @@
 <title>Amber · Influencer Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -227,14 +228,14 @@
 
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-7">
-        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Funnel: Views → Bookings</h3><span class="text-xs text-zinc-500">drop-off at each step</span></div>
-        <div id="funnel-html" class="space-y-2 py-2"></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5 flex flex-col">
+        <div class="flex items-center justify-between mb-2 w-full"><h3 class="font-semibold text-sm">Funnel: Views → Bookings</h3><span class="text-xs text-zinc-500">drop-off at each step</span></div>
+        <div id="funnel-html" class="space-y-2 py-2 flex flex-col items-center w-full"></div>
       </div>
 
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5">
-        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Paid vs Affiliate</h3><span class="text-xs text-zinc-500">spend · views · traffic · efficiency</span></div>
-        <div id="paid-affiliate-cards" class="grid grid-cols-2 gap-3 py-2"></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-7 flex flex-col">
+        <div class="flex items-center justify-between mb-2 w-full"><h3 class="font-semibold text-sm">Paid vs Affiliate</h3><span class="text-xs text-zinc-500">spend · views · traffic · efficiency</span></div>
+        <div id="paid-affiliate-cards" class="grid grid-cols-2 gap-3 py-2 w-full"></div>
       </div>
 
 
@@ -1131,8 +1132,13 @@ function renderActiveChips(tab, hostId, totalRows){
 function upsertChart(id, config){
   if (state.charts[id]) state.charts[id].destroy();
   const ctx = document.getElementById(id); if (!ctx) return;
-  const base = { responsive:true, maintainAspectRatio:false, animation:{duration:250}, plugins:{legend:{display:false}} };
+  const base = { responsive:true, maintainAspectRatio:false, animation:{duration:250}, plugins:{legend:{display:false}, datalabels:{display:false}} };
   config.options = Object.assign({}, base, config.options || {});
+  // Ensure we register the datalabels plugin if it's not already
+  if (window.ChartDataLabels) {
+    if (!config.plugins) config.plugins = [];
+    if (!config.plugins.includes(window.ChartDataLabels)) config.plugins.push(window.ChartDataLabels);
+  }
   state.charts[id] = new Chart(ctx, config);
 }
 function cursorHover(){ return (e, els) => { if (e.native && e.native.target) e.native.target.style.cursor = els.length ? "pointer" : "default"; }; }
@@ -2621,13 +2627,14 @@ function renderVideoKPIs(rows){
   const cpl = safeDiv(budget,leads);
   const cpbf = safeDiv(budget,bookforms);
   const cpb = safeDiv(budget,bookings);
-  const videosLive = rows.filter(r => !r.isCrossPosted).length;
+  const videosLive = rows.length; // all rows including cross-posted
   const crossPosted = rows.filter(r => r.isCrossPosted).length;
+  const uniqueVideos = rows.filter(r => !r.isCrossPosted).length;
   const k = [
-    { label:"Videos live", value: videosLive.toLocaleString(), sub:`${crossPosted} cross-posted` },
+    { label:"Videos live", value: videosLive.toLocaleString(), sub:`${uniqueVideos} unique · ${crossPosted} cross-posted` },
     { label:"Total spend", value: fmtINR(budget), sub:`${paidRows.length} paid videos` },
     { label:"Views", value: fmtNum(views), sub:`CPV ₹${fmtDecimal(cpv)}` },
-    { label:"Avg Views / Video", value: fmtNum(rows.length > 0 ? views / rows.length : 0), sub:`across ${rows.length} videos` },
+    { label:"Avg Views / Video", value: fmtNum(videosLive > 0 ? views / videosLive : 0), sub:`across ${videosLive} videos` },
     { label:"Traffic", value: fmtNum(traffic), sub: views && leads ? ((leads/traffic)*100).toFixed(2)+"% of traffic → leads" : "" },
     { label:"Leads", value: fmtNum(leads), sub:`CPL ${fmtINR(cpl)}`, color:"text-emerald-600" },
     { label:"Bookforms", value: fmtNum(bookforms), sub:`CPBF ${fmtINR(cpbf)}` },
@@ -2652,17 +2659,25 @@ function renderVideoCharts(rows){
     { name:"Bookings", n:bk, color:"#ec4899" },
   ];
   const maxN = stages[0].n || 1;
+  // Build a proper tapered funnel using clip-path trapezoids
   document.getElementById("funnel-html").innerHTML = stages.map((s,i) => {
     const prev = i>0 ? stages[i-1].n : null;
-    const pctOfTop = ((s.n / maxN) * 100).toFixed(1);
-    const drop = prev!=null ? ((s.n / prev) * 100).toFixed(2) + "% step" : "";
+    const pctOfTop = Math.max((s.n / maxN) * 100, 4);
+    const nextPct  = i < stages.length-1 ? Math.max((stages[i+1].n / maxN) * 100, 4) : pctOfTop;
+    const drop = prev!=null ? ((s.n / prev) * 100).toFixed(1) + "% of prev" : "";
+    // Trapezoid via clip-path: top width = pctOfTop, bottom width = nextPct, centred
+    const tl = ((100 - pctOfTop) / 2).toFixed(2);
+    const tr = (100 - parseFloat(tl)).toFixed(2);
+    const bl = ((100 - nextPct) / 2).toFixed(2);
+    const br = (100 - parseFloat(bl)).toFixed(2);
+    const clip = `polygon(${tl}% 0%, ${tr}% 0%, ${br}% 100%, ${bl}% 100%)`;
     return `
-      <div>
-        <div class="flex items-center justify-between text-sm mb-1">
-          <span class="font-medium">${s.name}: <span class="tabular-nums font-bold text-base">${fmtNum(s.n)}</span></span>
-          <span class="text-zinc-500 text-xs">${drop}</span>
+      <div class="w-full">
+        <div style="clip-path:${clip}; background:${s.color}; height:28px; width:100%; opacity:0.85;"></div>
+        <div class="flex items-center justify-between text-xs mt-0.5 px-1">
+          <span class="text-zinc-700">${s.name}: <span class="tabular-nums font-medium">${fmtNum(s.n)}</span></span>
+          <span class="text-zinc-400 text-[10px]">${drop}</span>
         </div>
-        <div class="funnel-bar" style="width:${Math.max(pctOfTop,1)}%; background:${s.color};"></div>
       </div>`;
   }).join("");
 
@@ -2678,29 +2693,29 @@ function renderVideoCharts(rows){
     let extras = "";
     if (isPaid) {
        extras = `
-        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-bold tabular-nums">₹${fmtDecimal(safeDiv(bud,vw))}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">CPL</span><span class="font-bold tabular-nums">${fmtINR(safeDiv(bud,ld))}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">CPBF</span><span class="font-bold tabular-nums">${fmtINR(safeDiv(bud,bf))}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">CPB</span><span class="font-bold tabular-nums">${fmtINR(safeDiv(bud,bk))}</span></div>
+        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-medium">₹${fmtDecimal(safeDiv(bud,vw))}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">CPL</span><span class="font-medium">${fmtINR(safeDiv(bud,ld))}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">CPBF</span><span class="font-medium">${fmtINR(safeDiv(bud,bf))}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">CPB</span><span class="font-medium">${fmtINR(safeDiv(bud,bk))}</span></div>
        `;
     } else {
        // Just CPV for affiliate, though budget is usually 0
        extras = `
-        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-bold tabular-nums">₹${fmtDecimal(safeDiv(bud,vw))}</span></div>
+        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-medium">₹${fmtDecimal(safeDiv(bud,vw))}</span></div>
        `;
     }
 
     return `<div class="bg-zinc-50 rounded-lg p-3 border border-zinc-200">
       <div class="text-[11px] uppercase tracking-wide font-semibold ${color}">${title}</div>
-      <div class="text-2xl font-bold mt-1">${rs.length} videos</div>
-      <div class="mt-2 space-y-1 text-sm">
-        <div class="flex justify-between"><span class="text-zinc-500">Spend</span><span class="font-bold tabular-nums">${fmtINRExact(bud)}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Avg Spend</span><span class="font-bold tabular-nums">${fmtINR(avgSpend)}</span></div>
-        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">Views</span><span class="font-bold tabular-nums">${fmtNum(vw)}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Traffic</span><span class="font-bold tabular-nums">${fmtNum(tr)}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Leads</span><span class="font-bold tabular-nums">${fmtNum(ld)}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Bookforms</span><span class="font-bold tabular-nums">${fmtNum(bf)}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Bookings</span><span class="font-bold tabular-nums">${fmtNum(bk)}</span></div>
+      <div class="text-xl font-bold mt-1">${rs.length} videos</div>
+      <div class="mt-2 space-y-0.5 text-xs">
+        <div class="flex justify-between"><span class="text-zinc-500">Spend</span><span class="font-medium">${fmtINRExact(bud)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Avg Spend</span><span class="font-medium">${fmtINR(avgSpend)}</span></div>
+        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">Views</span><span class="font-medium">${fmtNum(vw)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Traffic</span><span class="font-medium">${fmtNum(tr)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Leads</span><span class="font-medium">${fmtNum(ld)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Bookforms</span><span class="font-medium">${fmtNum(bf)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Bookings</span><span class="font-medium">${fmtNum(bk)}</span></div>
         ${extras}
       </div>
     </div>`;
@@ -2819,8 +2834,12 @@ function renderVideoCharts(rows){
       { label:"Traffic", data:sourceData.map(s=>s.tr), backgroundColor:"#0ea5e9" },
       { label:"Leads", data:sourceData.map(s=>s.ld), backgroundColor:"#10b981" },
     ]},
-    options:{ plugins:{ legend:{position:"bottom"} }, scales:{ y:{beginAtZero:true} },
-      onClick: chartClickFilter("videos","source","filters-videos"), onHover: cursorHover() },
+    options:{ 
+      layout: { padding: { top: 20 } },
+      plugins:{ legend:{position:"bottom"}, datalabels:{ display:true, anchor:'end', align:'end', formatter: (v)=>fmtNum(v), font:{size:10, weight:'bold'}, color:'#4b5563' } }, 
+      scales:{ y:{beginAtZero:true} },
+      onClick: chartClickFilter("videos","source","filters-videos"), onHover: cursorHover() 
+    },
   });
 
   // ----- Destination -> traffic + leads -----
@@ -2838,8 +2857,12 @@ function renderVideoCharts(rows){
       { label:"Traffic", data:destData.map(d=>d.tr), backgroundColor:"#0ea5e9" },
       { label:"Leads", data:destData.map(d=>d.ld), backgroundColor:"#10b981" },
     ]},
-    options:{ plugins:{ legend:{position:"bottom"} }, scales:{ y:{beginAtZero:true} },
-      onClick: chartClickFilter("videos","destination","filters-videos"), onHover: cursorHover() },
+    options:{ 
+      layout: { padding: { top: 20 } },
+      plugins:{ legend:{position:"bottom"}, datalabels:{ display:true, anchor:'end', align:'end', formatter: (v)=>fmtNum(v), font:{size:10, weight:'bold'}, color:'#4b5563' } }, 
+      scales:{ y:{beginAtZero:true} },
+      onClick: chartClickFilter("videos","destination","filters-videos"), onHover: cursorHover() 
+    },
   });
   // ── Source Country VS Budget Spent ──
   const srcBudget = {};
