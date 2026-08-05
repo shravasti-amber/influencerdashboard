@@ -239,12 +239,7 @@
 
 
 
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-7">
-        <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Platform performance</h3><span class="text-xs text-zinc-500">traffic · leads · spend</span></div>
-        <div class="h-[320px]"><canvas id="vch-channel"></canvas></div>
-      </div>
-
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-5">
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
         <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Cost efficiency by platform</h3><span class="text-xs text-zinc-500">CPV · CPL · efficiency</span></div>
         <div class="overflow-x-auto"><table class="w-full text-xs" id="tbl-channel-eff"></table></div>
       </div>
@@ -257,11 +252,11 @@
             <p class="text-xs text-zinc-500 mt-0.5">total spend per source country · sorted high to low</p>
           </div>
         </div>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto max-h-[400px] overflow-y-auto relative">
           <table class="w-full text-xs">
-            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px] sticky top-0 shadow-sm z-20">
               <tr>
-                <th class="px-3 py-2 text-left">Source Country</th>
+                <th class="px-3 py-2 text-left bg-zinc-50 sticky left-0 z-20 shadow-[1px_0_0_0_#e4e4e7]">Source Country</th>
                 <th class="px-3 py-2 text-right">Videos</th>
                 <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Budget Spent</th>
                 <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Avg Spend</th>
@@ -274,7 +269,7 @@
               </tr>
             </thead>
             <tbody id="tbl-src-budget-tbody" class="divide-y divide-zinc-100"></tbody>
-            <tfoot id="tbl-src-budget-tfoot" class="bg-zinc-50 font-semibold"></tfoot>
+            <tfoot id="tbl-src-budget-tfoot" class="bg-zinc-50 font-semibold sticky bottom-0 shadow-sm z-20"></tfoot>
           </table>
         </div>
       </div>
@@ -286,11 +281,11 @@
             <p class="text-xs text-zinc-500 mt-0.5">views · traffic · leads · spend by content type</p>
           </div>
         </div>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto max-h-[400px] overflow-y-auto relative">
           <table class="w-full text-xs">
-            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px] sticky top-0 shadow-sm z-20">
               <tr>
-                <th class="px-3 py-2 text-left">Content Type</th>
+                <th class="px-3 py-2 text-left bg-zinc-50 sticky left-0 z-20 shadow-[1px_0_0_0_#e4e4e7]">Content Type</th>
                 <th class="px-3 py-2 text-right">Videos</th>
                 <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Spend</th>
                 <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Avg Spend</th>
@@ -394,6 +389,7 @@
             <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px] sticky top-0 shadow-sm z-10">
               <tr>
                 <th class="px-3 py-2 text-left bg-zinc-50">Influencer (Partner)</th>
+                <th class="px-3 py-2 text-left bg-zinc-50">POC</th>
                 <th class="px-3 py-2 text-right bg-zinc-50">Activities</th>
                 <th class="px-3 py-2 text-right bg-zinc-50">Views</th>
                 <th class="px-3 py-2 text-right bg-zinc-50">Traffic</th>
@@ -2662,9 +2658,9 @@ function renderVideoCharts(rows){
     const drop = prev!=null ? ((s.n / prev) * 100).toFixed(2) + "% step" : "";
     return `
       <div>
-        <div class="flex items-center justify-between text-xs mb-1">
-          <span class="font-medium">${s.name}: <span class="tabular-nums">${fmtNum(s.n)}</span></span>
-          <span class="text-zinc-500">${drop}</span>
+        <div class="flex items-center justify-between text-sm mb-1">
+          <span class="font-medium">${s.name}: <span class="tabular-nums font-bold text-base">${fmtNum(s.n)}</span></span>
+          <span class="text-zinc-500 text-xs">${drop}</span>
         </div>
         <div class="funnel-bar" style="width:${Math.max(pctOfTop,1)}%; background:${s.color};"></div>
       </div>`;
@@ -2682,29 +2678,29 @@ function renderVideoCharts(rows){
     let extras = "";
     if (isPaid) {
        extras = `
-        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-medium">₹${fmtDecimal(safeDiv(bud,vw))}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">CPL</span><span class="font-medium">${fmtINR(safeDiv(bud,ld))}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">CPBF</span><span class="font-medium">${fmtINR(safeDiv(bud,bf))}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">CPB</span><span class="font-medium">${fmtINR(safeDiv(bud,bk))}</span></div>
+        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-bold tabular-nums">₹${fmtDecimal(safeDiv(bud,vw))}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">CPL</span><span class="font-bold tabular-nums">${fmtINR(safeDiv(bud,ld))}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">CPBF</span><span class="font-bold tabular-nums">${fmtINR(safeDiv(bud,bf))}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">CPB</span><span class="font-bold tabular-nums">${fmtINR(safeDiv(bud,bk))}</span></div>
        `;
     } else {
        // Just CPV for affiliate, though budget is usually 0
        extras = `
-        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-medium">₹${fmtDecimal(safeDiv(bud,vw))}</span></div>
+        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">CPV</span><span class="font-bold tabular-nums">₹${fmtDecimal(safeDiv(bud,vw))}</span></div>
        `;
     }
 
     return `<div class="bg-zinc-50 rounded-lg p-3 border border-zinc-200">
       <div class="text-[11px] uppercase tracking-wide font-semibold ${color}">${title}</div>
-      <div class="text-xl font-bold mt-1">${rs.length} videos</div>
-      <div class="mt-2 space-y-0.5 text-xs">
-        <div class="flex justify-between"><span class="text-zinc-500">Spend</span><span class="font-medium">${fmtINRExact(bud)}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Avg Spend</span><span class="font-medium">${fmtINR(avgSpend)}</span></div>
-        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">Views</span><span class="font-medium">${fmtNum(vw)}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Traffic</span><span class="font-medium">${fmtNum(tr)}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Leads</span><span class="font-medium">${fmtNum(ld)}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Bookforms</span><span class="font-medium">${fmtNum(bf)}</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Bookings</span><span class="font-medium">${fmtNum(bk)}</span></div>
+      <div class="text-2xl font-bold mt-1">${rs.length} videos</div>
+      <div class="mt-2 space-y-1 text-sm">
+        <div class="flex justify-between"><span class="text-zinc-500">Spend</span><span class="font-bold tabular-nums">${fmtINRExact(bud)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Avg Spend</span><span class="font-bold tabular-nums">${fmtINR(avgSpend)}</span></div>
+        <div class="flex justify-between border-t border-zinc-200 mt-1 pt-1"><span class="text-zinc-500">Views</span><span class="font-bold tabular-nums">${fmtNum(vw)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Traffic</span><span class="font-bold tabular-nums">${fmtNum(tr)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Leads</span><span class="font-bold tabular-nums">${fmtNum(ld)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Bookforms</span><span class="font-bold tabular-nums">${fmtNum(bf)}</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Bookings</span><span class="font-bold tabular-nums">${fmtNum(bk)}</span></div>
         ${extras}
       </div>
     </div>`;
@@ -2724,45 +2720,25 @@ function renderVideoCharts(rows){
     const sub = rows.filter(r=>r.channel===c);
     return { ch:c, bud: sumField(sub,"budget"), vw: sumField(sub,"views"), tr: sumField(sub,"traffic"), ld: sumField(sub,"leads"), bk: sumField(sub,"bookings"), n: sub.length };
   }).sort((a,b)=>b.ld-a.ld);
-  upsertChart("vch-channel", {
-    type:"bar",
-    data:{ labels:chData.map(c=>c.ch), datasets:[
-      { label:"Traffic", data:chData.map(c=>c.tr), backgroundColor:"#0ea5e9", yAxisID:"y" },
-      { label:"Leads", data:chData.map(c=>c.ld), backgroundColor:"#10b981", yAxisID:"y" },
-      { label:"Spend (₹L)", data:chData.map(c=>+(c.bud/1e5).toFixed(2)), backgroundColor:"#a78bfa", yAxisID:"y2" },
-    ]},
-    options:{ plugins:{ legend:{position:"bottom"},
-      tooltip:{ callbacks:{ afterLabel: ctx => {
-        const c = chData[ctx.dataIndex];
-        if (ctx.dataset.label==="Traffic"){
-          const share = trafficTotal ? ((c.tr/trafficTotal)*100).toFixed(1) : "0";
-          return `${share}% of total traffic`;
-        }
-        if (ctx.dataset.label==="Leads"){ return `CPL ${fmtINR(safeDiv(c.bud,c.ld))}`; }
-        return ""; } } } },
-      scales:{ y:{position:"left", beginAtZero:true, title:{display:true,text:"Traffic / Leads"} },
-        y2:{ position:"right", beginAtZero:true, grid:{drawOnChartArea:false}, title:{display:true, text:"Spend (₹ lakh)"} } },
-      onClick: chartClickFilter("videos","channel","filters-videos"), onHover: cursorHover() },
-  });
-
-
-
   // ----- Channel efficiency table -----
   const tbl = document.getElementById("tbl-channel-eff");
   tbl.innerHTML = `
     <thead class="bg-zinc-50 text-zinc-600 uppercase tracking-wide">
-      <tr><th class="px-2 py-2 text-left">Channel</th><th class="px-2 py-2 text-right">Videos</th><th class="px-2 py-2 text-right">Spend</th><th class="px-2 py-2 text-right">Avg Spend</th><th class="px-2 py-2 text-right">Views</th><th class="px-2 py-2 text-right">Leads</th><th class="px-2 py-2 text-right">Bookforms</th><th class="px-2 py-2 text-right">Bookings</th><th class="px-2 py-2 text-right">CPV</th><th class="px-2 py-2 text-right">CPL</th><th class="px-2 py-2 text-right">CPBF</th><th class="px-2 py-2 text-right">CPB</th></tr>
+      <tr><th class="px-2 py-2 text-left">Channel</th><th class="px-2 py-2 text-right">Videos</th><th class="px-2 py-2 text-right">Spend</th><th class="px-2 py-2 text-right">Avg Spend</th><th class="px-2 py-2 text-right">Views</th><th class="px-2 py-2 text-right">Traffic</th><th class="px-2 py-2 text-right">% Traffic</th><th class="px-2 py-2 text-right">Leads</th><th class="px-2 py-2 text-right">Bookforms</th><th class="px-2 py-2 text-right">Bookings</th><th class="px-2 py-2 text-right">CPV</th><th class="px-2 py-2 text-right">CPL</th><th class="px-2 py-2 text-right">CPBF</th><th class="px-2 py-2 text-right">CPB</th></tr>
     </thead><tbody class="divide-y divide-zinc-100">
     ${chData.map(c => {
       const bf = sumField(rows.filter(r=>r.channel===c.ch),"bookforms");
       const bk = sumField(rows.filter(r=>r.channel===c.ch),"bookings");
       const avgBud = c.n > 0 ? safeDiv(c.bud, c.n) : 0;
+      const pctTr = trafficTotal > 0 ? ((c.tr / trafficTotal) * 100).toFixed(1) + "%" : "0%";
       return `<tr>
         <td class="px-2 py-2 font-medium">${escapeHtml(c.ch)}</td>
         <td class="px-2 py-2 text-right">${c.n}</td>
         <td class="px-2 py-2 text-right">${fmtINR(c.bud)}</td>
         <td class="px-2 py-2 text-right">${fmtINR(avgBud)}</td>
         <td class="px-2 py-2 text-right">${fmtNum(c.vw)}</td>
+        <td class="px-2 py-2 text-right">${fmtNum(c.tr)}</td>
+        <td class="px-2 py-2 text-right text-zinc-500">${pctTr}</td>
         <td class="px-2 py-2 text-right">${fmtNum(c.ld)}</td>
         <td class="px-2 py-2 text-right">${fmtNum(bf)}</td>
         <td class="px-2 py-2 text-right">${fmtNum(bk)}</td>
@@ -2889,7 +2865,7 @@ function renderVideoCharts(rows){
     sbTbody.innerHTML = srcBudgetRows.map((d, idx) => {
       const z = idx % 2 === 0 ? "" : "bg-zinc-50/60";
       return `<tr class="hover:bg-indigo-50 ${z}">
-        <td class="px-3 py-2 font-medium">${escapeHtml(d.src)}</td>
+        <td class="px-3 py-2 font-medium bg-white sticky left-0 z-10 shadow-[1px_0_0_0_#e4e4e7]">${escapeHtml(d.src)}</td>
         <td class="px-3 py-2 text-right tabular-nums text-zinc-500">${d.n}</td>
         <td class="px-3 py-2 text-right tabular-nums font-semibold bg-violet-50 text-violet-700">${fmtINRExact(d.bud)}</td>
         <td class="px-3 py-2 text-right tabular-nums bg-violet-50 text-violet-700">${fmtINR(safeDiv(d.bud, d.n))}</td>
@@ -2909,7 +2885,7 @@ function renderVideoCharts(rows){
       const tBf  = srcBudgetRows.reduce((s,d)=>s+d.bf,  0);
       const tBk  = srcBudgetRows.reduce((s,d)=>s+d.bk,  0);
       sbTfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
-        <td class="px-3 py-2 font-bold">Grand Total</td>
+        <td class="px-3 py-2 font-bold bg-zinc-50 sticky left-0 z-10 shadow-[1px_0_0_0_#e4e4e7]">Grand Total</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold text-zinc-500">${tN}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${fmtINRExact(tBud)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${fmtINR(safeDiv(tBud, tN))}</td>
@@ -2968,7 +2944,7 @@ function renderVideoCharts(rows){
     ctTbody.innerHTML = ctRows.map((d, idx) => {
       const z = idx % 2 === 0 ? "" : "bg-zinc-50/60";
       return `<tr class="hover:bg-indigo-50 ${z}">
-        <td class="px-3 py-2 font-medium">${escapeHtml(d.type)}</td>
+        <td class="px-3 py-2 font-medium bg-white sticky left-0 z-10 shadow-[1px_0_0_0_#e4e4e7]">${escapeHtml(d.type)}</td>
         <td class="px-3 py-2 text-right tabular-nums text-zinc-500">${d.n}</td>
         <td class="px-3 py-2 text-right tabular-nums bg-violet-50 text-violet-700">${d.bud > 0 ? fmtINR(d.bud) : "—"}</td>
         <td class="px-3 py-2 text-right tabular-nums bg-violet-50 text-violet-700">${d.n > 0 ? fmtINR(safeDiv(d.bud, d.n)) : "—"}</td>
@@ -2990,7 +2966,7 @@ function renderVideoCharts(rows){
       const tBf  = ctRows.reduce((s,d)=>s+d.bf,  0);
       const tBk  = ctRows.reduce((s,d)=>s+d.bk,  0);
       ctTfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
-        <td class="px-3 py-2 font-bold">Grand Total</td>
+        <td class="px-3 py-2 font-bold bg-zinc-50 sticky left-0 z-10 shadow-[1px_0_0_0_#e4e4e7]">Grand Total</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold text-zinc-500">${tN}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${tBud > 0 ? fmtINR(tBud) : "—"}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold bg-violet-50 text-violet-700">${tN > 0 ? fmtINR(safeDiv(tBud, tN)) : "—"}</td>
@@ -3023,17 +2999,13 @@ function renderVideoCharts(rows){
     data: {
       labels: uniqueTrendData.map(d => d.m),
       datasets: [
-        { type: "bar", label: "Unique Influencers", data: uniqueTrendData.map(d => d.uniqueCount), backgroundColor: "#f43f5e", yAxisID: "y" },
-        { type: "line", label: "Views", data: uniqueTrendData.map(d => d.vw), borderColor: "#8b5cf6", backgroundColor: "#8b5cf6", yAxisID: "y2", tension: 0.3 },
-        { type: "line", label: "Traffic", data: uniqueTrendData.map(d => d.tr), borderColor: "#0ea5e9", backgroundColor: "#0ea5e9", yAxisID: "y2", tension: 0.3, hidden: true },
-        { type: "line", label: "Leads", data: uniqueTrendData.map(d => d.ld), borderColor: "#10b981", backgroundColor: "#10b981", yAxisID: "y2", tension: 0.3, hidden: true }
+        { type: "bar", label: "Unique Influencers", data: uniqueTrendData.map(d => d.uniqueCount), backgroundColor: "#f43f5e", yAxisID: "y" }
       ]
     },
     options: {
-      plugins: { legend: { position: "bottom" } },
+      plugins: { legend: { position: "bottom", display: false } }, // hidden since it's just one metric
       scales: {
-        y: { position: "left", title: { display: true, text: "Unique Influencers" }, beginAtZero: true },
-        y2: { position: "right", title: { display: true, text: "Performance Metric" }, grid: { drawOnChartArea: false }, beginAtZero: true }
+        y: { position: "left", title: { display: true, text: "Unique Influencers" }, beginAtZero: true }
       },
       onClick: chartClickFilter("videos", "month", "filters-videos"), onHover: cursorHover()
     }
@@ -3043,7 +3015,7 @@ function renderVideoCharts(rows){
   const infAgg = new Map();
   for (const r of rows) {
     if (!r.partner || r.partner === "—") continue;
-    const cur = infAgg.get(r.partner) || { n:0, vw:0, tr:0, ld:0, bf:0, bk:0, bud:0 };
+    const cur = infAgg.get(r.partner) || { n:0, vw:0, tr:0, ld:0, bf:0, bk:0, bud:0, poc: r.poc };
     cur.n++;
     cur.vw += (r.views || 0);
     cur.tr += (r.traffic || 0);
@@ -3051,6 +3023,8 @@ function renderVideoCharts(rows){
     cur.bf += (r.bookforms || 0);
     cur.bk += (r.bookings || 0);
     cur.bud += (r.budget || 0);
+    // Keep most recent POC if it's changing (rows are usually sorted by date in sheet)
+    if (r.poc && r.poc !== "—") cur.poc = r.poc; 
     infAgg.set(r.partner, cur);
   }
   
@@ -3063,6 +3037,7 @@ function renderVideoCharts(rows){
       const z = idx % 2 === 0 ? "" : "bg-zinc-50/60";
       return `<tr class="hover:bg-indigo-50 ${z}">
         <td class="px-3 py-2 font-medium">${escapeHtml(d.partner)}</td>
+        <td class="px-3 py-2 text-zinc-600">${escapeHtml(d.poc)}</td>
         <td class="px-3 py-2 text-right tabular-nums text-zinc-500">${d.n}</td>
         <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.vw)}</td>
         <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.tr)}</td>
@@ -3084,6 +3059,7 @@ function renderVideoCharts(rows){
       
       infTfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
         <td class="px-3 py-2 font-bold">Grand Total (${infRows.length} Unique Influencers)</td>
+        <td class="px-3 py-2"></td>
         <td class="px-3 py-2 text-right tabular-nums font-bold text-zinc-500">${tN}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tVw)}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tTr)}</td>
