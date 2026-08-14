@@ -152,6 +152,7 @@
       </div>
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Top destinations</h3><span class="text-xs text-zinc-500">where influencers are sent</span></div><div class="h-[300px]"><canvas id="ch-dest"></canvas></div></div>
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Top source countries</h3><span class="text-xs text-zinc-500">overall count</span></div><div class="h-[300px]"><canvas id="ch-source"></canvas></div></div>
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6"><div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">How prospects were found</h3><span class="text-xs text-zinc-500">by Source</span></div><div class="h-[340px]"><canvas id="ch-foundvia"></canvas></div></div>
 
       <!-- Section 3 — Deep Dive Analytics -->
       <div class="lg:col-span-12 -mb-2 pt-3"><h2 class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Deep Dive Analytics</h2></div>
@@ -853,6 +854,7 @@ function normalizeProspect(r){
     platform: platform || "—",
     status: status || "—",
     lostReason: norm(getCell(r,"Lost reasons")) || "",
+    foundVia: norm(getCell(r,"Source")) || "—",
   };
 }
 
@@ -1172,6 +1174,7 @@ const PROSPECT_FILTERS = {
   source:     { label:"Source Country", field:"source", set:null },
   region:     { label:"Source Region", field:"region", set:null, options: [...CANONICAL_REGIONS].sort() },
   status:     { label:"Status", field:"status", set:null },
+  foundVia:   { label:"Found Via", field:"foundVia", set:null },
 };
 
 function buildProspectFilters(){
@@ -1204,6 +1207,7 @@ function applyProspectFilters(){
       if (!f.region.has(r.region)) return false;
     }
     if (f.status.size && !f.status.has(r.status)) return false;
+    if (f.foundVia.size && !f.foundVia.has(r.foundVia)) return false;
     if (f.search){ const q=f.search.toLowerCase(); const hay=`${r.partner} ${r.email} ${r.source} ${r.destination} ${r.poc}`.toLowerCase(); if (!hay.includes(q)) return false; }
     return true;
   });
@@ -1425,6 +1429,16 @@ function renderProspectCharts(rows){
       backgroundColor:["#6366f1","#ec4899","#f59e0b","#06b6d4","#10b981","#8b5cf6","#ef4444","#64748b"] }] },
     options:{ plugins:{ legend:{position:"bottom", labels:{boxWidth:10}} },
       onClick: chartClickFilter("prospects","platform","filters-prospects"), onHover: cursorHover() },
+  });
+  // how prospects were found (Source: Social Media / Google Search / Marketplace)
+  const allowedFoundVia = new Set(["Social Media", "Google Search", "Marketplace"]);
+  const foundViaCounts = counts(rows,"foundVia").filter(p => allowedFoundVia.has(p[0]));
+  upsertChart("ch-foundvia", {
+    type:"doughnut",
+    data:{ labels:foundViaCounts.map(p=>p[0]), datasets:[{ data:foundViaCounts.map(p=>p[1]),
+      backgroundColor:["#6366f1","#f59e0b","#10b981"] }] },
+    options:{ plugins:{ legend:{position:"bottom", labels:{boxWidth:10}} },
+      onClick: chartClickFilter("prospects","foundVia","filters-prospects"), onHover: cursorHover() },
   });
   // platform mix for onboarded — with Count / MoM% toggle
   state._channelOnbRows = rows; // save for re-render on toggle
