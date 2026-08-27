@@ -108,7 +108,10 @@
   <div data-tab-content="prospects" class="hidden space-y-6">
 
     <section class="bg-white rounded-xl border border-zinc-200 p-4">
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3" id="filters-prospects"></div>
+      <div id="filters-prospects" class="space-y-3">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="filters-prospects-row1"></div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="filters-prospects-row2"></div>
+      </div>
       <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
         <div id="active-chips-prospects" class="flex flex-wrap gap-1.5"></div>
         <div class="flex items-center gap-2">
@@ -648,6 +651,20 @@ const PAID_AFF_MAP = {
 };
 const PLATFORM_COLORS = ["#6366f1","#ec4899","#f59e0b","#06b6d4","#10b981","#8b5cf6","#ef4444","#64748b"];
 const EXCLUDED_POCS = new Set(["Mehak","Tanisha"]);
+// Active roster, effective August 2026 onward — team members who have left are hidden
+// from that month forward, but their historical (pre-Aug-2026) rows still count everywhere.
+const ROSTER_CUTOFF = new Date(2026, 7, 1).getTime(); // Aug 1 2026 (month index 7 = August)
+const ACTIVE_ROSTER_FROM_AUG_2026 = new Set([
+  "Akksheda","Ishita","Janhavi","Pooja","Devansh","Nikhil", // Interns
+  "Abhishek","Deeksha","Ishika","Royce","Shravasti","Palash", // FTEs
+]);
+// True if this row's POC should be shown, given the row's own month.
+// Rows before August 2026 always show (nobody is retroactively hidden);
+// rows from August 2026 onward only show for people still on the active roster.
+function isActiveForRow(poc, monthSort){
+  if (monthSort < ROSTER_CUTOFF) return true;
+  return ACTIVE_ROSTER_FROM_AUG_2026.has(poc);
+}
 const TARGET_REACHOUTS = 120;
 const TARGET_ONBOARDS = 4;
 
@@ -1053,10 +1070,19 @@ document.querySelectorAll(".tab-btn").forEach(b => b.addEventListener("click", (
 // ============================================================
 // SHARED — multi-select filter UI
 // ============================================================
-function buildFilters(hostId, dataset, filterMap, onChange){
+// hostId is a WRAPPER element containing the filter grid(s), so a single host.querySelector
+// scope keeps working for event delegation and updateBtnLabel regardless of layout inside it.
+// rowKeys: optional array of filterMap keys that go in the wrapper's "-row1" child grid;
+// every other key goes in the "-row2" child grid. Omit rowKeys to render all filters directly
+// into hostId (single-row layout, e.g. the Videos tab).
+function buildFilters(hostId, dataset, filterMap, onChange, rowKeys){
   const host = document.getElementById(hostId);
-  host.innerHTML = "";
+  const row1 = rowKeys ? document.getElementById(hostId + "-row1") : null;
+  const row2 = rowKeys ? document.getElementById(hostId + "-row2") : null;
+  if (rowKeys && row1 && row2) { row1.innerHTML = ""; row2.innerHTML = ""; }
+  else { host.innerHTML = ""; }
   for (const [key, conf] of Object.entries(filterMap)){
+    const targetHost = rowKeys ? (rowKeys.includes(key) ? row1 : row2) : host;
     const values = conf.options || [...new Set(dataset.map(r => r[conf.field]).filter(Boolean))].sort(conf.sort || ((a,b) => a.localeCompare(b)));
     const wrap = document.createElement("div");
     wrap.className = "multiselect";
@@ -1071,9 +1097,9 @@ function buildFilters(hostId, dataset, filterMap, onChange){
         ${values.map(v => `<label><input type="checkbox" value="${escapeAttr(v)}" data-filter="${key}" /> <span>${escapeHtml(v)}</span></label>`).join("")}
       </div>
     `;
-    host.appendChild(wrap);
+    targetHost.appendChild(wrap);
   }
-  // events
+  // events — delegated from the wrapper, so they cover both row grids when rowKeys is used
   host.querySelectorAll("[data-toggle]").forEach(btn => {
     btn.addEventListener("click", e => {
       const k = btn.dataset.toggle;
@@ -1181,15 +1207,20 @@ function counts(rows, key, includeEmpty = false){
 // PROSPECTS TAB
 // ============================================================
 const PROSPECT_FILTERS = {
+  // Row 1
   poc:        { label:"POC", field:"poc", set:null },
   month:      { label:"Month", field:"month", set:null, sort:(a,b)=>monthSortKey(a)-monthSortKey(b) },
   platform:   { label:"Platform", field:"platform", set:null },
-  destination:{ label:"Destination Country", field:"destination", set:null },
-  source:     { label:"Source Country", field:"source", set:null },
-  region:     { label:"Source Region", field:"region", set:null, options: [...CANONICAL_REGIONS].sort() },
   status:     { label:"Status", field:"status", set:null },
+  // Row 2
+  region:     { label:"Source Region", field:"region", set:null, options: [...CANONICAL_REGIONS].sort() },
+  source:     { label:"Source Country", field:"source", set:null },
+  destination:{ label:"Destination Country", field:"destination", set:null },
   foundVia:   { label:"Found Via", field:"foundVia", set:null },
 };
+// Filter keys that belong on the first row of the two-row prospects filter grid — everything
+// else (in PROSPECT_FILTERS's remaining order) renders on the second row underneath.
+const PROSPECT_FILTERS_ROW1 = ["poc","month","platform","status"];
 
 function buildProspectFilters(){
   for (const [k] of Object.entries(PROSPECT_FILTERS)) PROSPECT_FILTERS[k].set = state.filters.prospects[k];
@@ -1204,7 +1235,7 @@ function buildProspectFilters(){
     // Only surface a region value if it's a canonical one (hides blank pre-Feb rows)
     region: CANONICAL_REGIONS.has(r.region) ? r.region : undefined,
   }));
-  buildFilters("filters-prospects", filterDataset, PROSPECT_FILTERS, applyProspectFilters);
+  buildFilters("filters-prospects", filterDataset, PROSPECT_FILTERS, applyProspectFilters, PROSPECT_FILTERS_ROW1);
 }
 
 function applyProspectFilters(){
@@ -1272,7 +1303,7 @@ function renderProspectKPIs(rows){
     { label:"Onboarded", value: (onb+wip).toLocaleString(), sub:`${onb} Live + ${wip} WIP`, color:"text-emerald-600" },
     { label:"Conversion rate", value: conv.toFixed(1)+"%", sub:"(onboarded + WIP) / total" },
     { label:"Lost", value: lost.toLocaleString(), sub: total ? ((lost/total)*100).toFixed(1)+"%" : "", color:"text-rose-600" },
-    { label:"POCs active", value: new Set(rows.map(r=>r.poc)).size, sub:"team members" },
+    { label:"POCs active", value: new Set(rows.filter(r=>isActiveForRow(r.poc,r.monthSort)).map(r=>r.poc)).size, sub:"team members" },
   ];
   document.getElementById("kpi-row-prospects").innerHTML = kpis.map(k => `
     <div class="bg-white rounded-xl border border-zinc-200 p-4">
@@ -1635,7 +1666,8 @@ function renderProspectCharts(rows){
       "Deeksha":"Full-time","Abhishek":"Full-time","Kaamil":"Full-time",
       "Royce":"Assoc. Manager","Palash":"Manager",
     };
-    const pocNames = [...new Set(rows.map(r=>r.poc).filter(p=>p&&p!=="—"&&ROLES[p]!=="Manager"))].sort();
+    const targetMonthSort = monthSortKey(targetMonth);
+    const pocNames = [...new Set(rows.map(r=>r.poc).filter(p=>p&&p!=="—"&&ROLES[p]!=="Manager"&&isActiveForRow(p,targetMonthSort)))].sort();
     const monthRows = rows.filter(r=>r.month===targetMonth);
     const ROLE_ORDER = {"Assoc. Manager":0,"Full-time":1,"Intern":2};
     pocNames.sort((a,b)=> (ROLE_ORDER[ROLES[a]]??9)-(ROLE_ORDER[ROLES[b]]??9) || a.localeCompare(b));
@@ -1671,9 +1703,10 @@ function renderProspectCharts(rows){
       <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">${totals[5]||"—"}</td>
     </tr>`;
   };
-  // pocList needed for conversion rate chart
-  const pocList = [...new Set(rows.map(r=>r.poc))].map(p => {
-    const sub = rows.filter(r=>r.poc===p);
+  // pocList needed for conversion rate chart — hide departed team members' Aug-2026+ rows
+  const rowsForPocList = rows.filter(r=>isActiveForRow(r.poc,r.monthSort));
+  const pocList = [...new Set(rowsForPocList.map(r=>r.poc))].map(p => {
+    const sub = rowsForPocList.filter(r=>r.poc===p);
     return {
       poc:p, total:sub.length,
       onb: sub.filter(r=>r.status==="Onboarded — Live").length,
@@ -2346,8 +2379,9 @@ function renderPocBreakdownTable(rows){
 
   if (state.pocExpandedCol === undefined) state.pocExpandedCol = null;
 
-  // POC names — alphabetical
+  // POC names — alphabetical. Rows from departed team members are hidden from Aug 2026 onward.
   const EXCLUDED_MANAGER = new Set(["Palash"]);
+  rows = rows.filter(r=>isActiveForRow(r.poc,r.monthSort));
   const pocNames = [...new Set(rows.map(r=>r.poc).filter(p=>p&&p!=="—"&&!EXCLUDED_MANAGER.has(p)))]
     .sort((a,b)=>a.localeCompare(b));
   const blank = n => n === 0 ? "" : n;
@@ -2774,10 +2808,11 @@ function renderVideoCharts(rows){
       </tr>`; }).join("")}
     </tbody>`;
 
-  // ----- POC performance — all POCs, exclude ex-team members -----
-  const pocs = [...new Set(rows.map(r=>r.poc))].filter(p => p && p !== "—" && !EXCLUDED_POCS.has(p));
+  // ----- POC performance — all POCs, exclude ex-team members (incl. Aug-2026+ roster) -----
+  const rowsForPocData = rows.filter(r=>isActiveForRow(r.poc,r.monthSort));
+  const pocs = [...new Set(rowsForPocData.map(r=>r.poc))].filter(p => p && p !== "—" && !EXCLUDED_POCS.has(p));
   const pocData = pocs.map(p => {
-    const sub = rows.filter(r=>r.poc===p);
+    const sub = rowsForPocData.filter(r=>r.poc===p);
     return {
       poc: p,
       n: sub.length,
@@ -3213,7 +3248,8 @@ function renderVideoProgress(rows){
 
   // Count videos: only rows in target month where activity is filled
   const monthRows = rows.filter(r => r.month === targetMonth && r.activity && r.activity !== "—");
-  const pocNames = [...new Set(monthRows.map(r=>r.poc).filter(p=>p&&p!=="—"&&ROLES[p]!=="Manager"))].sort();
+  const targetMonthSortVP = monthSortKey(targetMonth);
+  const pocNames = [...new Set(monthRows.map(r=>r.poc).filter(p=>p&&p!=="—"&&ROLES[p]!=="Manager"&&isActiveForRow(p,targetMonthSortVP)))].sort();
 
   const statusLabel = pct => {
     if (pct >= 100) return { text:"All done! ✅", color:"text-emerald-600 font-semibold" };
