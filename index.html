@@ -655,7 +655,7 @@ const EXCLUDED_POCS = new Set(["Mehak","Tanisha"]);
 // from that month forward, but their historical (pre-Aug-2026) rows still count everywhere.
 const ROSTER_CUTOFF = new Date(2026, 7, 1).getTime(); // Aug 1 2026 (month index 7 = August)
 const ACTIVE_ROSTER_FROM_AUG_2026 = new Set([
-  "Akksheda","Ishita","Janhavi","Pooja","Devansh","Nikhil", // Interns
+  "Akssheda","Ishita","Janhavi","Pooja","Devansh","Nikhil", // Interns
   "Abhishek","Deeksha","Ishika","Royce","Shravasti","Palash", // FTEs
 ]);
 // True if this row's POC should be shown, given the row's own month.
@@ -1602,7 +1602,7 @@ function renderProspectCharts(rows){
   // Weekly progress — role-aware, complete-row rule
   // From July 2026: updated roster
   const ROLES = {
-    "Akksheda":"Intern","Ishita":"Intern","Pooja":"Intern","Devansh":"Intern",
+    "Akssheda":"Intern","Ishita":"Intern","Pooja":"Intern","Devansh":"Intern",
     "Shravani":"Intern","Anisha":"Intern","Janhavi":"Intern",
     "Abhishek":"Full-time","Deeksha":"Full-time","Ishika":"Full-time","Shravasti":"Full-time",
     "Royce":"Assoc. Manager","Palash":"Manager",
@@ -1661,7 +1661,7 @@ function renderProspectCharts(rows){
 
     const ROLES = {
       "Ishika":"Intern","Aashray":"Intern","Aarya":"Intern","Shravasti":"Intern",
-      "Akksheda":"Intern","Divyanshu":"Intern","Ishita":"Intern","Pratiksha":"Intern",
+      "Akssheda":"Intern","Divyanshu":"Intern","Ishita":"Intern","Pratiksha":"Intern",
       "Pooja":"Intern","Shravani":"Intern","Devansh":"Intern","Anisha":"Intern","Janhavi":"Intern",
       "Deeksha":"Full-time","Abhishek":"Full-time","Kaamil":"Full-time",
       "Royce":"Assoc. Manager","Palash":"Manager",
@@ -3228,7 +3228,7 @@ function renderVideoProgress(rows){
   ];
 
   // Defined display order (from July 2026: updated roster)
-  const POC_ORDER = ["Royce","Abhishek","Deeksha","Ishika","Shravasti","Akksheda","Ishita","Pooja","Shravani","Devansh","Anisha","Janhavi"];
+  const POC_ORDER = ["Royce","Abhishek","Deeksha","Ishika","Shravasti","Akssheda","Ishita","Pooja","Shravani","Devansh","Anisha","Janhavi"];
 
   // Role targets (from July 2026: FTEs=32, Royce=26, Interns=20)
   const VIDEO_TARGETS = {
@@ -3240,7 +3240,7 @@ function renderVideoProgress(rows){
   };
   const ROLES = {
     // From July 2026: updated roster
-    "Akksheda":"Intern","Ishita":"Intern","Pooja":"Intern","Devansh":"Intern",
+    "Akssheda":"Intern","Ishita":"Intern","Pooja":"Intern","Devansh":"Intern",
     "Shravani":"Intern","Anisha":"Intern","Janhavi":"Intern",
     "Abhishek":"Full-time","Deeksha":"Full-time","Ishika":"Full-time","Shravasti":"Full-time",
     "Royce":"Assoc. Manager","Palash":"Manager",
