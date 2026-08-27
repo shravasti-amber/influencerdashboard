@@ -686,6 +686,20 @@ function deriveRegion(sourceCountry, monthSort) {
 const MONTH_NUM = { january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11 };
 function norm(v){return (v??"").toString().trim();}
 function titleCase(s){return s.toLowerCase().replace(/\b\w/g, c=>c.toUpperCase());}
+// Canonical source-country normalizer — the single source of truth for folding
+// spelling/casing variants ("Aus", "AUS", "Australia - Dom" → "Australia", etc.)
+// so every chart/table that groups by source country agrees with every other one.
+// "Check Australia FIRST" note: must precede the US check since "Australia" starts with "aus", not "us".
+function normalizeSourceCountry(s){
+  if (!s) return "";
+  const val = s.toString().trim();
+  if (!val || val === "—") return "";
+  const lower = val.toLowerCase();
+  if (lower.startsWith("aus") || lower.includes("australia")) return "Australia";
+  if (lower.startsWith("uk") || lower.includes("united kingdom")) return "UK - Dom";
+  if (lower.startsWith("us") || lower.includes("united states")) return "US - Dom";
+  return titleCase(val);
+}
 function mapVal(v, dict, fallback){
   const k = norm(v).toLowerCase();
   if (!k) return fallback ?? "";
@@ -846,7 +860,7 @@ function normalizeProspect(r){
     month, monthSort: mSort,
     reachDate,
     region: deriveRegion(norm(getCell(r,"Source Country")), mSort),
-    source: norm(getCell(r,"Source Country")) || "—",
+    source: normalizeSourceCountry(getCell(r,"Source Country")) || "—",
     destination: dest || "—",
     partner, channel: norm(getCell(r,"Channel link")),
     email: norm(getCell(r,"Email")),
@@ -894,7 +908,7 @@ function normalizeVideo(r){
     budget: num(getCell(r,"Budget (INR)")),
     contentType,
     channel: channel || "—",
-    source: norm(getCell(r,"Source Country")) || "—",
+    source: normalizeSourceCountry(getCell(r,"Source Country")) || "—",
     destination: dest || "—",
     region: norm(getCell(r,"Broader region by Source Country")) || "",
     views: num(getCell(r,"Total views")),
@@ -1924,17 +1938,9 @@ function renderVpTab(){
   const DOMESTIC_SOURCES = ["Australia", "UK - Dom", "US - Dom"];
   const STATUSES_T1 = ["Contacted", "Follow up", "Follow up 2", "Follow up 3", "Lost cases", "Onboarded", "Replied", "High ask"];
 
-  const normSource = s => {
-    if (!s) return "";
-    const val = s.toString().trim().toLowerCase();
-    // Check Australia FIRST — must come before the US check since "Australia" starts with "aus" not "us".
-    // startsWith("aus") catches: "Australia", "Australia - Dom", "Aus - Dom", "AUS", etc.
-    if (val.startsWith("aus") || val.includes("australia")) return "Australia";
-    if (val.startsWith("uk") || val.includes("united kingdom")) return "UK - Dom";
-    // Check US last — catches "US - Dom", "US", "USA", "United States"
-    if (val.startsWith("us") || val.includes("united states")) return "US - Dom";
-    return s.toString().trim();
-  };
+  // Rows are already normalized via normalizeSourceCountry() in normalizeProspect(),
+  // so this just guards against empty/dash values — kept as a thin wrapper for call-site clarity.
+  const normSource = s => normalizeSourceCountry(s);
 
   function matchStatus(r, status) {
     if (status === "Contacted") return r.status === "Contacted";
@@ -2051,16 +2057,9 @@ function renderVpTab(){
   const t2Body = document.getElementById("vp-table2-tbody");
   const t2Foot = document.getElementById("vp-table2-tfoot");
 
-  // Normalize source country to a proper display name
-  // Preserves abbreviations like UK and US, avoids title-casing them to "Uk"/"Us"
-  const dispSrc = s => {
-    if (!s || s === "—") return s;
-    const val = s.toString().trim().toLowerCase();
-    if (val.startsWith("aus") || val.includes("australia")) return "Australia";
-    if (val.startsWith("uk") || val.includes("united kingdom")) return "UK-Dom";
-    if (val.startsWith("us") || val.includes("united states")) return "US-Dom";
-    return s.toString().trim().split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ").trim();
-  };
+  // Rows are already normalized via normalizeSourceCountry() in normalizeProspect() —
+  // delegate to the same shared function so this table agrees with every other view.
+  const dispSrc = s => normalizeSourceCountry(s) || s;
 
   const allSources2 = [...new Set(t2Rows.map(r => dispSrc(r.source)).filter(s => s && s !== "—"))];
 
