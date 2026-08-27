@@ -52,6 +52,8 @@
   #vp-ch-onb-tbody tr:hover { background-color: #eef2ff !important; }
   #vp-table4-tbody tr:nth-child(even) { background-color: #f8f8fa; }
   #vp-table4-tbody tr:hover { background-color: #eef2ff !important; }
+  #vp-assignments-tbody-1 tr:nth-child(even), #vp-assignments-tbody-2 tr:nth-child(even) { background-color: #f8f8fa; }
+  #vp-assignments-tbody-1 tr:hover, #vp-assignments-tbody-2 tr:hover { background-color: #eef2ff !important; }
   /* Thin, semi-transparent scrollbar */
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -495,6 +497,38 @@
         </div>
       </div>
 
+      <!-- Source Country -> Assigned POC reference table (split into two columns) -->
+      <div class="bg-white rounded-xl border border-zinc-200 p-4">
+        <div class="mb-3">
+          <h3 class="font-semibold text-sm">Source Country → Assigned POC</h3>
+          <p class="text-xs text-zinc-500 mt-0.5">current country focus assignments</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]">
+                <tr>
+                  <th class="px-3 py-2 text-left">Source Country</th>
+                  <th class="px-3 py-2 text-left">Assigned POC</th>
+                </tr>
+              </thead>
+              <tbody id="vp-assignments-tbody-1" class="divide-y divide-zinc-100"></tbody>
+            </table>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]">
+                <tr>
+                  <th class="px-3 py-2 text-left">Source Country</th>
+                  <th class="px-3 py-2 text-left">Assigned POC</th>
+                </tr>
+              </thead>
+              <tbody id="vp-assignments-tbody-2" class="divide-y divide-zinc-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Table 2: Source Country x Reachout Status -->
       <div class="bg-white rounded-xl border border-zinc-200 p-4">
         <div class="flex items-center justify-between mb-3">
@@ -717,6 +751,38 @@ function normalizeSourceCountry(s){
   if (lower.startsWith("us") || lower.includes("united states")) return "US - Dom";
   return titleCase(val);
 }
+// Country focus assignments — which POC(s) are assigned to prioritize outreach in each
+// source country. "Aus-Dom/UK-Dom" and "UK-Dom/US-Dom" are single combined assignments,
+// matching normalizeSourceCountry()'s "Australia"/"UK - Dom"/"US - Dom" output.
+const POC_COUNTRY_ASSIGNMENTS = {
+  "Abhishek":  ["Nigeria","Nepal","Malaysia","China","India"],
+  "Aditi":     ["China","Nepal","Taiwan","Thailand","India"],
+  "Akssheda":  ["Philippines","Bangladesh","Indonesia","US - Dom","India"],
+  "Devansh":   ["Bangladesh","Pakistan","Malaysia","Nepal","India"],
+  "Ishika":    ["Nigeria","Philippines","Aus-Dom/UK-Dom","Thailand","India"],
+  "Ishita":    ["Philippines","Malaysia","Indonesia","Hong Kong","India"],
+  "Janhavi":   ["Nigeria","Philippines","Vietnam","Aus-Dom/UK-Dom","India"],
+  "Nikhil":    ["Thailand","Taiwan","Hong Kong","China","India"],
+  "Pooja":     ["China","Hong Kong","Indonesia","UK-Dom/US-Dom","India"],
+  "Shivansh":  ["Vietnam","Bangladesh","Pakistan","Taiwan","India"],
+  "Shravasti": ["Hong Kong","China","Thailand","Taiwan","India"],
+};
+const POC_ORDER_T2B = Object.keys(POC_COUNTRY_ASSIGNMENTS);
+// Country → list of POCs assigned to it, in POC_ORDER_T2B order.
+const COUNTRY_TO_POCS = {};
+for (const poc of POC_ORDER_T2B) for (const c of POC_COUNTRY_ASSIGNMENTS[poc]) {
+  (COUNTRY_TO_POCS[c] ||= []).push(poc);
+}
+// Focus-country row order: everyone's individual assignment first (first-seen order),
+// "India" last since it's shared by every POC and isn't a "focus" pick.
+const FOCUS_COUNTRY_ORDER = Object.keys(COUNTRY_TO_POCS).sort((a,b) => (a==="India") - (b==="India"));
+// Combined-assignment labels ("Aus-Dom/UK-Dom" etc.) map to the set of normalized
+// source values they represent, for matching Table 2's per-row normalized source country
+// against a focus-country label that covers more than one normalized value.
+const COMBINED_SOURCE_MATCH = {
+  "Aus-Dom/UK-Dom": new Set(["Australia","UK - Dom"]),
+  "UK-Dom/US-Dom":  new Set(["UK - Dom","US - Dom"]),
+};
 function mapVal(v, dict, fallback){
   const k = norm(v).toLowerCase();
   if (!k) return fallback ?? "";
@@ -2109,9 +2175,20 @@ function renderVpTab(){
       respRate: pct(onbTotal+(vals[repliedIdx]||0), grand) };
   }).filter(d=>d.grand>0);
 
+  // Focus countries (per POC_COUNTRY_ASSIGNMENTS) sort ahead of everything else — "India" is
+  // shared by everyone so it doesn't count as a "focus" distinction on its own.
+  const isFocusSrc = src => src !== "India" && FOCUS_COUNTRY_ORDER.some(country => {
+    if (country === "India") return false;
+    const combo = COMBINED_SOURCE_MATCH[country];
+    return combo ? combo.has(src) : country === src;
+  });
+
   let t2Data = buildT2Data(allSources2);
-  if (state.vpT2Sort === "grand") t2Data.sort((a,b)=>b.grand-a.grand||a.src.localeCompare(b.src));
-  else t2Data.sort((a,b)=>a.src.localeCompare(b.src));
+  if (state.vpT2Sort === "grand") {
+    t2Data.sort((a,b)=> (isFocusSrc(b.src)-isFocusSrc(a.src)) || b.grand-a.grand || a.src.localeCompare(b.src));
+  } else {
+    t2Data.sort((a,b)=> (isFocusSrc(b.src)-isFocusSrc(a.src)) || a.src.localeCompare(b.src));
+  }
 
   if (t2Head){
     let hCells = `<th class="px-3 py-2 text-left sticky left-0 bg-zinc-50 z-10">Source Country</th>`;
@@ -2126,14 +2203,25 @@ function renderVpTab(){
     const colTotals2 = new Array(STATUS_T2.length).fill(0);
     let grandTotalAll2 = 0, grandOnbT = 0, grandRespN = 0;
     const repliedIdx2 = STATUS_T2.findIndex(s=>s.key==="Replied");
+    // Bold divider between the focus-country rows and everything else — only meaningful
+    // (and only drawn) when both groups are present, and only right at the transition row.
+    let seenFocus = false, seenNonFocusAfterFocus = false;
     t2Body.innerHTML = t2Data.map(({src,vals,grand,onbTotal,onbRate,respRate}) => {
       vals.forEach((n,i) => colTotals2[i] += n);
       grandTotalAll2 += grand; grandOnbT += onbTotal; grandRespN += (vals[repliedIdx2]||0);
-      let cells = `<td class="px-3 py-2 font-medium sticky left-0 bg-white z-10">${escapeHtml(src)}</td>`;
-      vals.forEach(n => { cells += `<td class="px-2 py-2 text-right tabular-nums ${n===0?"text-zinc-200":""}">${blank(n)}</td>`; });
-      cells += `<td class="px-3 py-2 text-right tabular-nums font-semibold">${grand}</td>`;
-      cells += `<td class="px-3 py-2 text-right tabular-nums bg-emerald-50 text-emerald-700 font-medium">${onbRate}</td>`;
-      cells += `<td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700 font-medium">${respRate}</td>`;
+      const focus = isFocusSrc(src);
+      if (focus) seenFocus = true;
+      const isDividerRow = !focus && seenFocus && !seenNonFocusAfterFocus;
+      if (isDividerRow) seenNonFocusAfterFocus = true;
+      // Border goes on each <td> (inline style, not a Tailwind class) rather than the <tr> —
+      // a border-top on <tr> is unreliable in table layouts, and an inline style guarantees
+      // it wins over the tbody's own "divide-y" utility border on every cell.
+      const dividerStyle = isDividerRow ? ` style="border-top:2px solid #a1a1aa;"` : "";
+      let cells = `<td class="px-3 py-2 font-medium sticky left-0 bg-white z-10"${dividerStyle}>${escapeHtml(src)}</td>`;
+      vals.forEach(n => { cells += `<td class="px-2 py-2 text-right tabular-nums ${n===0?"text-zinc-200":""}"${dividerStyle}>${blank(n)}</td>`; });
+      cells += `<td class="px-3 py-2 text-right tabular-nums font-semibold"${dividerStyle}>${grand}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-emerald-50 text-emerald-700 font-medium"${dividerStyle}>${onbRate}</td>`;
+      cells += `<td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700 font-medium"${dividerStyle}>${respRate}</td>`;
       return `<tr class="hover:bg-zinc-50">${cells}</tr>`;
     }).join("");
     let fCells2 = `<td class="px-3 py-2 font-bold sticky left-0 bg-zinc-50 z-10">Grand Total</td>`;
@@ -2143,6 +2231,18 @@ function renderVpTab(){
     fCells2 += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${pct(grandOnbT+grandRespN,grandTotalAll2)}</td>`;
     if (t2Foot) t2Foot.innerHTML = `<tr class="border-t-2 border-zinc-300">${fCells2}</tr>`;
   }
+
+  // ── Source Country → Assigned POC reference table (split into 2 columns) ──
+  const assignRowHtml = country => `
+      <tr class="hover:bg-zinc-50">
+        <td class="px-3 py-2 font-medium">${escapeHtml(country)}</td>
+        <td class="px-3 py-2">${country === "India" ? "Everyone" : escapeHtml(COUNTRY_TO_POCS[country].join(", "))}</td>
+      </tr>`;
+  const assignSplit = Math.ceil(FOCUS_COUNTRY_ORDER.length / 2);
+  const assignTbody1 = document.getElementById("vp-assignments-tbody-1");
+  const assignTbody2 = document.getElementById("vp-assignments-tbody-2");
+  if (assignTbody1) assignTbody1.innerHTML = FOCUS_COUNTRY_ORDER.slice(0, assignSplit).map(assignRowHtml).join("");
+  if (assignTbody2) assignTbody2.innerHTML = FOCUS_COUNTRY_ORDER.slice(assignSplit).map(assignRowHtml).join("");
 
   // ── TABLE 3: Channel-wise Onboarded (VP copy) ──
   renderVpChannelOnboarded(rows);
