@@ -689,7 +689,7 @@ const EXCLUDED_POCS = new Set(["Mehak","Tanisha"]);
 // from that month forward, but their historical (pre-Aug-2026) rows still count everywhere.
 const ROSTER_CUTOFF = new Date(2026, 7, 1).getTime(); // Aug 1 2026 (month index 7 = August)
 const ACTIVE_ROSTER_FROM_AUG_2026 = new Set([
-  "Akssheda","Ishita","Janhavi","Pooja","Devansh","Nikhil", // Interns
+  "Akssheda","Ishita","Janhavi","Pooja","Devansh","Nikhil","Aditi","Shivansh", // Interns
   "Abhishek","Deeksha","Ishika","Royce","Shravasti","Palash", // FTEs
 ]);
 // True if this row's POC should be shown, given the row's own month.
@@ -2479,11 +2479,9 @@ function renderPocBreakdownTable(rows){
 
   if (state.pocExpandedCol === undefined) state.pocExpandedCol = null;
 
-  // POC names — alphabetical. Rows from departed team members are hidden from Aug 2026 onward.
+  // Rows from departed team members are hidden from Aug 2026 onward.
   const EXCLUDED_MANAGER = new Set(["Palash"]);
   rows = rows.filter(r=>isActiveForRow(r.poc,r.monthSort));
-  const pocNames = [...new Set(rows.map(r=>r.poc).filter(p=>p&&p!=="—"&&!EXCLUDED_MANAGER.has(p)))]
-    .sort((a,b)=>a.localeCompare(b));
   const blank = n => n === 0 ? "" : n;
 
   const STATUS_COLS = [
@@ -2505,6 +2503,20 @@ function renderPocBreakdownTable(rows){
     : allMonthsSorted.includes(currentMonthLabel) ? currentMonthLabel
     : allMonthsSorted[allMonthsSorted.length-1];
   if (multiMonth) targetMonth = null;
+
+  // POC names — alphabetical. Always show every POC on the active roster for the table's
+  // month scope (a single selected month, or "now" as a default), even with zero rows —
+  // a person doesn't disappear from the table just because they had no reach-outs that
+  // month. Falls back to whoever has data when multiple months are selected, since "the
+  // roster as of" is ambiguous across a mixed month range.
+  const pocScopeMonthSort = targetMonth ? monthSortKey(targetMonth) : null;
+  const rosterPocNames = pocScopeMonthSort !== null
+    ? (pocScopeMonthSort < ROSTER_CUTOFF
+        ? [...new Set(rows.filter(r=>r.month===targetMonth).map(r=>r.poc))]
+        : [...ACTIVE_ROSTER_FROM_AUG_2026])
+    : [...new Set(rows.map(r=>r.poc))];
+  const pocNames = [...new Set(rosterPocNames)].filter(p=>p&&p!=="—"&&!EXCLUDED_MANAGER.has(p))
+    .sort((a,b)=>a.localeCompare(b));
 
   let weekBounds = [];
   if (targetMonth){
