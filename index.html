@@ -2825,6 +2825,7 @@ function renderSourceCountryViewsSpend(rows){
   const gtRows = rows.filter(r => VIEWS_SPEND_FOCUS_COUNTRIES.has(r.source));
 
   const prospectRowsAll = state.datasets.prospects || [];
+  const prospectsUploaded = prospectRowsAll.length > 0;
   const prospectRows = prospectRowsAll.filter(r => (!f.month.size || f.month.has(r.month)) && VIEWS_SPEND_FOCUS_COUNTRIES.has(r.source));
 
   const viewsBySrc = new Map();
@@ -2858,8 +2859,12 @@ function renderSourceCountryViewsSpend(rows){
     viewsHighlightsHost.innerHTML = [
       highlightCard("Most Views", mostViews?mostViews[0]:"—", mostViews?`${fmtNum(mostViews[1])} views`:"no data", "text-emerald-600"),
       highlightCard("Fewest Views", leastViews?leastViews[0]:"—", leastViews?`${fmtNum(leastViews[1])} views`:"no data", "text-rose-600"),
-      highlightCard("Most Onboarded", mostOnb?mostOnb[0]:"—", mostOnb?`${fmtNum(mostOnb[1])} onboarded`:"no data", "text-emerald-600"),
-      highlightCard("Fewest Onboarded", leastOnb?leastOnb[0]:"—", leastOnb?`${fmtNum(leastOnb[1])} onboarded`:"no data", "text-rose-600"),
+      prospectsUploaded
+        ? highlightCard("Most Onboarded", mostOnb?mostOnb[0]:"—", mostOnb?`${fmtNum(mostOnb[1])} onboarded`:"no data", "text-emerald-600")
+        : highlightCard("Most Onboarded", "—", "please upload Prospects Sheet to view this", "text-zinc-400"),
+      prospectsUploaded
+        ? highlightCard("Fewest Onboarded", leastOnb?leastOnb[0]:"—", leastOnb?`${fmtNum(leastOnb[1])} onboarded`:"no data", "text-rose-600")
+        : highlightCard("Fewest Onboarded", "—", "please upload Prospects Sheet to view this", "text-zinc-400"),
     ].join("");
   }
   const viewsChartData = nonIndiaSources.map(s => [s, viewsBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
@@ -2891,8 +2896,8 @@ function renderSourceCountryViewsSpend(rows){
     spendHighlightsHost.innerHTML = [
       highlightCard("Highest Spend", mostSpend?mostSpend[0]:"—", mostSpend?`${fmtINR(mostSpend[1])} spent`:"no data", "text-rose-600"),
       highlightCard("Lowest Spend", leastSpend?leastSpend[0]:"—", leastSpend?`${fmtINR(leastSpend[1])} spent`:"no data", "text-emerald-600"),
-      highlightCard("Underperforming Despite Spend", worstEff?worstEff.s:"—", worstEff?`${fmtINR(worstEff.cpv)} per view`:"no data", "text-rose-600"),
-      highlightCard("Efficient Despite Low Spend", bestEff?bestEff.s:"—", bestEff?`${fmtINR(bestEff.cpv)} per view`:"no data", "text-emerald-600"),
+      highlightCard("Underperforming Despite Spend", worstEff?worstEff.s:"—", worstEff?`₹${worstEff.cpv.toFixed(2)} per view`:"no data", "text-rose-600"),
+      highlightCard("Efficient Despite Low Spend", bestEff?bestEff.s:"—", bestEff?`₹${bestEff.cpv.toFixed(2)} per view`:"no data", "text-emerald-600"),
     ].join("");
   }
   const spendChartData = nonIndiaSources.map(s => [s, spendBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
@@ -2930,10 +2935,7 @@ function renderSourceCountryViewsSpend(rows){
         cpv: views > 0 ? spend/views : null,
         cpo: onb > 0 ? spend/onb : null };
     });
-    effRows.sort((a,b) => {
-      const av = a.cpv ?? -1, bv = b.cpv ?? -1; // rows with no cost-per-view sort last
-      return bv - av || a.s.localeCompare(b.s);
-    });
+    effRows.sort((a,b) => a.s.localeCompare(b.s)); // alphabetical by source country
     effBody.innerHTML = effRows.map(d => `
       <tr class="hover:bg-zinc-50">
         <td class="px-3 py-2 font-medium">${escapeHtml(d.s)}</td>
