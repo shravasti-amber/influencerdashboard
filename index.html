@@ -419,6 +419,32 @@
         </div>
       </div>
 
+      <!-- Views by Source Country -->
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
+        <div class="mb-3">
+          <h3 class="font-semibold text-sm">Views by Source Country</h3>
+          <p class="text-xs text-zinc-500 mt-0.5" id="vp-views-subtitle">focus source countries · Growth Tracker views · India excluded from highlights</p>
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4" id="vp-views-highlights"></div>
+        <div class="h-[420px]"><canvas id="ch-vp-views"></canvas></div>
+      </div>
+
+      <!-- Spend by Source Country + Efficiency Table -->
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
+        <div class="mb-3">
+          <h3 class="font-semibold text-sm">Spend by Source Country</h3>
+          <p class="text-xs text-zinc-500 mt-0.5" id="vp-spend-subtitle">focus source countries · Growth Tracker budget · India excluded from highlights</p>
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4" id="vp-spend-highlights"></div>
+        <div class="h-[420px] mb-4"><canvas id="ch-vp-spend"></canvas></div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs" id="vp-efficiency-table">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="vp-efficiency-thead"></thead>
+            <tbody id="vp-efficiency-tbody" class="divide-y divide-zinc-100"></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Video progress tracker -->
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
         <div class="flex items-center justify-between mb-1">
@@ -610,32 +636,6 @@
 
       </div>
 
-      <!-- Views by Source Country -->
-      <div class="bg-white rounded-xl border border-zinc-200 p-4">
-        <div class="mb-3">
-          <h3 class="font-semibold text-sm">Views by Source Country</h3>
-          <p class="text-xs text-zinc-500 mt-0.5" id="vp-views-subtitle">Growth Tracker views · India excluded from highlights</p>
-        </div>
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4" id="vp-views-highlights"></div>
-        <div class="h-[420px]"><canvas id="ch-vp-views"></canvas></div>
-      </div>
-
-      <!-- Spend by Source Country + Efficiency Table -->
-      <div class="bg-white rounded-xl border border-zinc-200 p-4">
-        <div class="mb-3">
-          <h3 class="font-semibold text-sm">Spend by Source Country</h3>
-          <p class="text-xs text-zinc-500 mt-0.5" id="vp-spend-subtitle">Growth Tracker budget · India excluded from highlights</p>
-        </div>
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4" id="vp-spend-highlights"></div>
-        <div class="h-[420px] mb-4"><canvas id="ch-vp-spend"></canvas></div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs" id="vp-efficiency-table">
-            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="vp-efficiency-thead"></thead>
-            <tbody id="vp-efficiency-tbody" class="divide-y divide-zinc-100"></tbody>
-          </table>
-        </div>
-      </div>
-
       <!-- Table 4: Source Country MoM Onboarded Growth -->
       <div class="bg-white rounded-xl border border-zinc-200 p-4">
         <div class="flex items-center justify-between mb-3">
@@ -779,6 +779,12 @@ function normalizeSourceCountry(s){
   if (lower.startsWith("us") || lower.includes("united states")) return "US - Dom";
   return titleCase(val);
 }
+// Source countries the Views/Spend-by-Source-Country charts (Growth Tracker tab) are
+// scoped to. Canonical labels match normalizeSourceCountry()'s output.
+const VIEWS_SPEND_FOCUS_COUNTRIES = new Set([
+  "China","Philippines","Hong Kong","Thailand","Taiwan","Nigeria","Nepal","Malaysia",
+  "Vietnam","Bangladesh","Pakistan","Indonesia","Sri Lanka","Australia","UK - Dom",
+]);
 // Country focus assignments — which POC(s) are assigned to prioritize outreach in each
 // source country. "Aus-Dom/UK-Dom" and "UK-Dom/US-Dom" are single combined assignments,
 // matching normalizeSourceCountry()'s "Australia"/"UK - Dom"/"US - Dom" output.
@@ -2275,140 +2281,6 @@ function renderVpTab(){
   // ── TABLE 3: Channel-wise Onboarded (VP copy) ──
   renderVpChannelOnboarded(rows);
 
-  // ── Views by Source Country + Spend by Source Country ──
-  // Growth Tracker rows (views, budget) scoped by the same VP month filter as everything
-  // else on this tab, so both charts move together with the prospects-side tables above.
-  const gtRowsAll = state.datasets.videos || [];
-  const gtRows = gtRowsAll.filter(r => !vf.month.size || vf.month.has(r.month));
-
-  const viewsBySrc = new Map();
-  gtRows.forEach(r => {
-    const src = dispSrc(r.source);
-    if (!src || src === "—") return;
-    viewsBySrc.set(src, (viewsBySrc.get(src)||0) + (r.views||0));
-  });
-  const spendBySrc = new Map();
-  gtRows.forEach(r => {
-    const src = dispSrc(r.source);
-    if (!src || src === "—") return;
-    spendBySrc.set(src, (spendBySrc.get(src)||0) + (r.budget||0));
-  });
-  const onbBySrc = new Map();
-  rows.filter(isOnb).forEach(r => {
-    const src = dispSrc(r.source);
-    if (!src || src === "—") return;
-    onbBySrc.set(src, (onbBySrc.get(src)||0) + 1);
-  });
-
-  // Every source country seen across either dataset, so the highlights and table cover
-  // countries that only have views/spend, or only have prospects, not just the overlap.
-  const allVpSources = new Set([...viewsBySrc.keys(), ...spendBySrc.keys(), ...onbBySrc.keys()]);
-  const nonIndiaSources = [...allVpSources].filter(s => s !== "India");
-
-  const highlightCard = (label, name, sub, color) => `
-    <div class="bg-white rounded-xl border border-zinc-200 p-4">
-      <div class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">${escapeHtml(label)}</div>
-      <div class="text-xl font-bold mt-1 ${color||""} break-words leading-tight">${escapeHtml(name)}</div>
-      <div class="text-xs text-zinc-500 mt-1">${escapeHtml(sub)}</div>
-    </div>`;
-
-  // ── Views chart + highlights (India excluded from "most/least" only, not from the chart) ──
-  const viewsHighlightsHost = document.getElementById("vp-views-highlights");
-  if (viewsHighlightsHost) {
-    const viewsRanked = nonIndiaSources.map(s => [s, viewsBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
-    const onbRanked = nonIndiaSources.map(s => [s, onbBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
-    const mostViews = viewsRanked[0], leastViews = viewsRanked[viewsRanked.length-1];
-    const mostOnb = onbRanked[0], leastOnb = onbRanked[onbRanked.length-1];
-    viewsHighlightsHost.innerHTML = [
-      highlightCard("Most Views", mostViews?mostViews[0]:"—", mostViews?`${fmtNum(mostViews[1])} views`:"no data", "text-emerald-600"),
-      highlightCard("Fewest Views", leastViews?leastViews[0]:"—", leastViews?`${fmtNum(leastViews[1])} views`:"no data", "text-rose-600"),
-      highlightCard("Most Onboarded", mostOnb?mostOnb[0]:"—", mostOnb?`${fmtNum(mostOnb[1])} onboarded`:"no data", "text-emerald-600"),
-      highlightCard("Fewest Onboarded", leastOnb?leastOnb[0]:"—", leastOnb?`${fmtNum(leastOnb[1])} onboarded`:"no data", "text-rose-600"),
-    ].join("");
-  }
-  const viewsChartData = nonIndiaSources.map(s => [s, viewsBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
-  upsertChart("ch-vp-views", {
-    type:"bar",
-    data:{ labels: viewsChartData.map(d=>d[0]), datasets:[{ label:"Views", data: viewsChartData.map(d=>d[1]),
-      backgroundColor:"#6366f1", borderRadius:4 }] },
-    options:{ indexAxis:"y", plugins:{ legend:{display:false} },
-      scales:{ x:{ beginAtZero:true, ticks:{ callback:v=>fmtNum(v) } } } },
-  });
-  const viewsSubtitle = document.getElementById("vp-views-subtitle");
-  if (viewsSubtitle) viewsSubtitle.textContent = (selectedVpMonths.length > 0
-    ? [...selectedVpMonths].sort((a,b)=>monthSortKey(a)-monthSortKey(b)).join(", ")
-    : "all months") + " · Growth Tracker views · India excluded from highlights";
-
-  // ── Spend chart + highlights, plus the spend/views/onboard efficiency table ──
-  const spendHighlightsHost = document.getElementById("vp-spend-highlights");
-  if (spendHighlightsHost) {
-    const spendRanked = nonIndiaSources.map(s => [s, spendBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
-    const mostSpend = spendRanked[0], leastSpend = spendRanked[spendRanked.length-1];
-    // "Underperforming despite spend": highest spend-per-view among countries with real spend.
-    // "Efficient despite low spend": lowest spend-per-view among countries with real views.
-    const perView = nonIndiaSources
-      .map(s => ({ s, spend: spendBySrc.get(s)||0, views: viewsBySrc.get(s)||0 }))
-      .filter(d => d.spend > 0 && d.views > 0)
-      .map(d => ({ ...d, cpv: d.spend / d.views }));
-    perView.sort((a,b)=>b.cpv-a.cpv);
-    const worstEff = perView[0], bestEff = perView[perView.length-1];
-    spendHighlightsHost.innerHTML = [
-      highlightCard("Highest Spend", mostSpend?mostSpend[0]:"—", mostSpend?`${fmtINR(mostSpend[1])} spent`:"no data", "text-rose-600"),
-      highlightCard("Lowest Spend", leastSpend?leastSpend[0]:"—", leastSpend?`${fmtINR(leastSpend[1])} spent`:"no data", "text-emerald-600"),
-      highlightCard("Underperforming Despite Spend", worstEff?worstEff.s:"—", worstEff?`${fmtINR(worstEff.cpv)} per view`:"no data", "text-rose-600"),
-      highlightCard("Efficient Despite Low Spend", bestEff?bestEff.s:"—", bestEff?`${fmtINR(bestEff.cpv)} per view`:"no data", "text-emerald-600"),
-    ].join("");
-  }
-  const spendChartData = nonIndiaSources.map(s => [s, spendBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
-  upsertChart("ch-vp-spend", {
-    type:"bar",
-    data:{ labels: spendChartData.map(d=>d[0]), datasets:[{ label:"Spend", data: spendChartData.map(d=>d[1]),
-      backgroundColor:"#f59e0b", borderRadius:4 }] },
-    options:{ indexAxis:"y", plugins:{ legend:{display:false},
-      tooltip:{ callbacks:{ label: ctx => "Spend: "+fmtINR(ctx.parsed.x) } } },
-      scales:{ x:{ beginAtZero:true, ticks:{ callback:v=>fmtINR(v) } } } },
-  });
-  const spendSubtitle = document.getElementById("vp-spend-subtitle");
-  if (spendSubtitle) spendSubtitle.textContent = (selectedVpMonths.length > 0
-    ? [...selectedVpMonths].sort((a,b)=>monthSortKey(a)-monthSortKey(b)).join(", ")
-    : "all months") + " · Growth Tracker budget · India excluded from highlights";
-
-  // Efficiency table: every non-India source with spend and/or views and/or onboards,
-  // sorted by cost-per-view descending so the worst spend-to-return countries surface first.
-  const effHead = document.getElementById("vp-efficiency-thead");
-  const effBody = document.getElementById("vp-efficiency-tbody");
-  if (effHead) {
-    effHead.innerHTML = `<tr>
-      <th class="px-3 py-2 text-left">Source Country</th>
-      <th class="px-3 py-2 text-right bg-orange-50 text-orange-700">Spend</th>
-      <th class="px-3 py-2 text-right bg-indigo-50 text-indigo-700">Views</th>
-      <th class="px-3 py-2 text-right bg-emerald-50 text-emerald-700">Onboarded</th>
-      <th class="px-3 py-2 text-right bg-yellow-50 text-yellow-700 font-semibold">Cost / View</th>
-      <th class="px-3 py-2 text-right bg-yellow-50 text-yellow-700 font-semibold">Cost / Onboard</th>
-    </tr>`;
-  }
-  if (effBody) {
-    const effRows = nonIndiaSources.map(s => {
-      const spend = spendBySrc.get(s)||0, views = viewsBySrc.get(s)||0, onb = onbBySrc.get(s)||0;
-      return { s, spend, views, onb,
-        cpv: views > 0 ? spend/views : null,
-        cpo: onb > 0 ? spend/onb : null };
-    }).filter(d => d.spend>0 || d.views>0 || d.onb>0);
-    effRows.sort((a,b) => {
-      const av = a.cpv ?? -1, bv = b.cpv ?? -1; // rows with no cost-per-view sort last
-      return bv - av || a.s.localeCompare(b.s);
-    });
-    effBody.innerHTML = effRows.map(d => `
-      <tr class="hover:bg-zinc-50">
-        <td class="px-3 py-2 font-medium">${escapeHtml(d.s)}</td>
-        <td class="px-3 py-2 text-right tabular-nums">${fmtINR(d.spend)}</td>
-        <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.views)}</td>
-        <td class="px-3 py-2 text-right tabular-nums">${d.onb||""}</td>
-        <td class="px-3 py-2 text-right tabular-nums font-medium">${d.cpv!=null?fmtINR(d.cpv):"—"}</td>
-        <td class="px-3 py-2 text-right tabular-nums font-medium">${d.cpo!=null?fmtINR(d.cpo):"—"}</td>
-      </tr>`).join("") || `<tr><td colspan="6" class="px-3 py-6 text-center text-zinc-400">No spend/view/onboard data for the selected filters</td></tr>`;
-  }
-
   // ── TABLE 4: Source Country Onboarded MoM Growth ──
   // Dynamic 3-month window: if filter months selected, use 3 months ending at latest selected; else last 3 in data
 
@@ -2935,9 +2807,143 @@ function applyVideoFilters(){
   renderVideoKPIs(rows);
   renderVideoCharts(rows);
   renderVideoProgress(rows);
+  renderSourceCountryViewsSpend(rows);
   renderTopVideos(rows);
   state.page.videos = 0;
   renderVideoTable(rows);
+}
+
+// Views by Source Country + Spend by Source Country, scoped to the focus source-country
+// list (China, Philippines, Hong Kong, Thailand, Taiwan, Nigeria, Nepal, Malaysia, Vietnam,
+// Bangladesh, Pakistan, Indonesia, Sri Lanka, Australia, UK - Dom). India is not part of
+// this focus list, so it never appears in either chart, its highlights, or the efficiency
+// table below. `rows` is this tab's own filtered Growth Tracker rows; onboarding counts
+// come from the prospects dataset, scoped by the same month filter as the videos tab.
+function renderSourceCountryViewsSpend(rows){
+  const isOnb = r => r.status === "Onboarded — Live" || r.status === "Onboarding WIP";
+  const f = state.filters.videos;
+  const gtRows = rows.filter(r => VIEWS_SPEND_FOCUS_COUNTRIES.has(r.source));
+
+  const prospectRowsAll = state.datasets.prospects || [];
+  const prospectRows = prospectRowsAll.filter(r => (!f.month.size || f.month.has(r.month)) && VIEWS_SPEND_FOCUS_COUNTRIES.has(r.source));
+
+  const viewsBySrc = new Map();
+  gtRows.forEach(r => { viewsBySrc.set(r.source, (viewsBySrc.get(r.source)||0) + (r.views||0)); });
+  const spendBySrc = new Map();
+  gtRows.forEach(r => { spendBySrc.set(r.source, (spendBySrc.get(r.source)||0) + (r.budget||0)); });
+  const onbBySrc = new Map();
+  prospectRows.filter(isOnb).forEach(r => { onbBySrc.set(r.source, (onbBySrc.get(r.source)||0) + 1); });
+
+  // Always show the full focus list (so a country with zero views/spend/onboards this
+  // period still appears as 0 rather than disappearing from the chart/table).
+  const focusSources = [...VIEWS_SPEND_FOCUS_COUNTRIES];
+  const nonIndiaSources = focusSources.filter(s => s !== "India"); // no-op today; kept for clarity/future-proofing
+
+  const highlightCard = (label, name, sub, color) => `
+    <div class="bg-white rounded-xl border border-zinc-200 p-4">
+      <div class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">${escapeHtml(label)}</div>
+      <div class="text-xl font-bold mt-1 ${color||""} break-words leading-tight">${escapeHtml(name)}</div>
+      <div class="text-xs text-zinc-500 mt-1">${escapeHtml(sub)}</div>
+    </div>`;
+
+  const selectedMonths = f.month.size ? [...f.month] : [];
+
+  // ── Views chart + highlights (India excluded from "most/least" only, not from the chart) ──
+  const viewsHighlightsHost = document.getElementById("vp-views-highlights");
+  if (viewsHighlightsHost) {
+    const viewsRanked = nonIndiaSources.map(s => [s, viewsBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
+    const onbRanked = nonIndiaSources.map(s => [s, onbBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
+    const mostViews = viewsRanked[0], leastViews = viewsRanked[viewsRanked.length-1];
+    const mostOnb = onbRanked[0], leastOnb = onbRanked[onbRanked.length-1];
+    viewsHighlightsHost.innerHTML = [
+      highlightCard("Most Views", mostViews?mostViews[0]:"—", mostViews?`${fmtNum(mostViews[1])} views`:"no data", "text-emerald-600"),
+      highlightCard("Fewest Views", leastViews?leastViews[0]:"—", leastViews?`${fmtNum(leastViews[1])} views`:"no data", "text-rose-600"),
+      highlightCard("Most Onboarded", mostOnb?mostOnb[0]:"—", mostOnb?`${fmtNum(mostOnb[1])} onboarded`:"no data", "text-emerald-600"),
+      highlightCard("Fewest Onboarded", leastOnb?leastOnb[0]:"—", leastOnb?`${fmtNum(leastOnb[1])} onboarded`:"no data", "text-rose-600"),
+    ].join("");
+  }
+  const viewsChartData = nonIndiaSources.map(s => [s, viewsBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
+  upsertChart("ch-vp-views", {
+    type:"bar",
+    data:{ labels: viewsChartData.map(d=>d[0]), datasets:[{ label:"Views", data: viewsChartData.map(d=>d[1]),
+      backgroundColor:"#6366f1", borderRadius:4 }] },
+    options:{ indexAxis:"y", plugins:{ legend:{display:false} },
+      scales:{ x:{ beginAtZero:true, ticks:{ callback:v=>fmtNum(v) } } } },
+  });
+  const viewsSubtitle = document.getElementById("vp-views-subtitle");
+  if (viewsSubtitle) viewsSubtitle.textContent = (selectedMonths.length > 0
+    ? [...selectedMonths].sort((a,b)=>monthSortKey(a)-monthSortKey(b)).join(", ")
+    : "all months") + " · focus source countries · Growth Tracker views · India excluded from highlights";
+
+  // ── Spend chart + highlights, plus the spend/views/onboard efficiency table ──
+  const spendHighlightsHost = document.getElementById("vp-spend-highlights");
+  if (spendHighlightsHost) {
+    const spendRanked = nonIndiaSources.map(s => [s, spendBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
+    const mostSpend = spendRanked[0], leastSpend = spendRanked[spendRanked.length-1];
+    // "Underperforming despite spend": highest spend-per-view among countries with real spend.
+    // "Efficient despite low spend": lowest spend-per-view among countries with real views.
+    const perView = nonIndiaSources
+      .map(s => ({ s, spend: spendBySrc.get(s)||0, views: viewsBySrc.get(s)||0 }))
+      .filter(d => d.spend > 0 && d.views > 0)
+      .map(d => ({ ...d, cpv: d.spend / d.views }));
+    perView.sort((a,b)=>b.cpv-a.cpv);
+    const worstEff = perView[0], bestEff = perView[perView.length-1];
+    spendHighlightsHost.innerHTML = [
+      highlightCard("Highest Spend", mostSpend?mostSpend[0]:"—", mostSpend?`${fmtINR(mostSpend[1])} spent`:"no data", "text-rose-600"),
+      highlightCard("Lowest Spend", leastSpend?leastSpend[0]:"—", leastSpend?`${fmtINR(leastSpend[1])} spent`:"no data", "text-emerald-600"),
+      highlightCard("Underperforming Despite Spend", worstEff?worstEff.s:"—", worstEff?`${fmtINR(worstEff.cpv)} per view`:"no data", "text-rose-600"),
+      highlightCard("Efficient Despite Low Spend", bestEff?bestEff.s:"—", bestEff?`${fmtINR(bestEff.cpv)} per view`:"no data", "text-emerald-600"),
+    ].join("");
+  }
+  const spendChartData = nonIndiaSources.map(s => [s, spendBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
+  upsertChart("ch-vp-spend", {
+    type:"bar",
+    data:{ labels: spendChartData.map(d=>d[0]), datasets:[{ label:"Spend", data: spendChartData.map(d=>d[1]),
+      backgroundColor:"#f59e0b", borderRadius:4 }] },
+    options:{ indexAxis:"y", plugins:{ legend:{display:false},
+      tooltip:{ callbacks:{ label: ctx => "Spend: "+fmtINR(ctx.parsed.x) } } },
+      scales:{ x:{ beginAtZero:true, ticks:{ callback:v=>fmtINR(v) } } } },
+  });
+  const spendSubtitle = document.getElementById("vp-spend-subtitle");
+  if (spendSubtitle) spendSubtitle.textContent = (selectedMonths.length > 0
+    ? [...selectedMonths].sort((a,b)=>monthSortKey(a)-monthSortKey(b)).join(", ")
+    : "all months") + " · focus source countries · Growth Tracker budget · India excluded from highlights";
+
+  // Efficiency table: every focus-list source with spend and/or views and/or onboards,
+  // sorted by cost-per-view descending so the worst spend-to-return countries surface first.
+  const effHead = document.getElementById("vp-efficiency-thead");
+  const effBody = document.getElementById("vp-efficiency-tbody");
+  if (effHead) {
+    effHead.innerHTML = `<tr>
+      <th class="px-3 py-2 text-left">Source Country</th>
+      <th class="px-3 py-2 text-right bg-orange-50 text-orange-700">Spend</th>
+      <th class="px-3 py-2 text-right bg-indigo-50 text-indigo-700">Views</th>
+      <th class="px-3 py-2 text-right bg-emerald-50 text-emerald-700">Onboarded</th>
+      <th class="px-3 py-2 text-right bg-yellow-50 text-yellow-700 font-semibold">Cost / View</th>
+      <th class="px-3 py-2 text-right bg-yellow-50 text-yellow-700 font-semibold">Cost / Onboard</th>
+    </tr>`;
+  }
+  if (effBody) {
+    const effRows = nonIndiaSources.map(s => {
+      const spend = spendBySrc.get(s)||0, views = viewsBySrc.get(s)||0, onb = onbBySrc.get(s)||0;
+      return { s, spend, views, onb,
+        cpv: views > 0 ? spend/views : null,
+        cpo: onb > 0 ? spend/onb : null };
+    });
+    effRows.sort((a,b) => {
+      const av = a.cpv ?? -1, bv = b.cpv ?? -1; // rows with no cost-per-view sort last
+      return bv - av || a.s.localeCompare(b.s);
+    });
+    effBody.innerHTML = effRows.map(d => `
+      <tr class="hover:bg-zinc-50">
+        <td class="px-3 py-2 font-medium">${escapeHtml(d.s)}</td>
+        <td class="px-3 py-2 text-right tabular-nums">${fmtINR(d.spend)}</td>
+        <td class="px-3 py-2 text-right tabular-nums">${fmtNum(d.views)}</td>
+        <td class="px-3 py-2 text-right tabular-nums">${d.onb||""}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-medium">${d.cpv!=null?fmtINR(d.cpv):"—"}</td>
+        <td class="px-3 py-2 text-right tabular-nums font-medium">${d.cpo!=null?fmtINR(d.cpo):"—"}</td>
+      </tr>`).join("") || `<tr><td colspan="6" class="px-3 py-6 text-center text-zinc-400">No spend/view/onboard data for the selected filters</td></tr>`;
+  }
 }
 
 function sumField(rows, field){ return rows.reduce((s,r)=>s+(r[field]||0), 0); }
