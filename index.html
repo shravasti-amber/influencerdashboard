@@ -268,9 +268,9 @@
         </div>
         <div class="overflow-x-auto max-h-[400px] overflow-y-auto relative">
           <table class="w-full text-xs">
-            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px] sticky top-0 shadow-sm z-20">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px] sticky top-0 shadow-sm z-10">
               <tr>
-                <th class="px-3 py-2 text-left bg-zinc-50 sticky left-0 z-20 shadow-[1px_0_0_0_#e4e4e7]">Source Country</th>
+                <th class="px-3 py-2 text-left bg-zinc-50 sticky left-0 z-10 shadow-[1px_0_0_0_#e4e4e7]">Source Country</th>
                 <th class="px-3 py-2 text-right">Videos</th>
                 <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Budget Spent</th>
                 <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Avg Spend</th>
@@ -283,7 +283,7 @@
               </tr>
             </thead>
             <tbody id="tbl-src-budget-tbody" class="divide-y divide-zinc-100"></tbody>
-            <tfoot id="tbl-src-budget-tfoot" class="bg-zinc-50 font-semibold sticky bottom-0 shadow-sm z-20"></tfoot>
+            <tfoot id="tbl-src-budget-tfoot" class="bg-zinc-50 font-semibold sticky bottom-0 shadow-sm z-10"></tfoot>
           </table>
         </div>
       </div>
@@ -297,9 +297,9 @@
         </div>
         <div class="overflow-x-auto max-h-[400px] overflow-y-auto relative">
           <table class="w-full text-xs">
-            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px] sticky top-0 shadow-sm z-20">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px] sticky top-0 shadow-sm z-10">
               <tr>
-                <th class="px-3 py-2 text-left bg-zinc-50 sticky left-0 z-20 shadow-[1px_0_0_0_#e4e4e7]">Content Type</th>
+                <th class="px-3 py-2 text-left bg-zinc-50 sticky left-0 z-10 shadow-[1px_0_0_0_#e4e4e7]">Content Type</th>
                 <th class="px-3 py-2 text-right">Videos</th>
                 <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Spend</th>
                 <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Avg Spend</th>
@@ -1034,7 +1034,7 @@ function normalizeVideo(r){
     bookforms: num(getCell(r,"Bookforms")),
     bookings: num(getCell(r,"Bookings")),
     language: norm(getCell(r,"Language")) || "—",
-    paidAff: (!actRaw) ? "—" : (paidAff || "—"),
+    paidAff: paidAff || "—",
     newExisting: norm(getCell(r,"New onboarding / Existing","New onboarding / Existing ")),
     quality: norm(getCell(r,"Quality")) || "—",
   };
