@@ -786,20 +786,20 @@ const VIEWS_SPEND_FOCUS_COUNTRIES = new Set([
   "Vietnam","Bangladesh","Pakistan","Indonesia","Sri Lanka","Australia","UK - Dom",
 ]);
 // Country focus assignments — which POC(s) are assigned to prioritize outreach in each
-// source country. "Aus-Dom/UK-Dom" and "UK-Dom/US-Dom" are single combined assignments,
-// matching normalizeSourceCountry()'s "Australia"/"UK - Dom"/"US - Dom" output.
+// source country. India is common to every POC and always listed last.
 const POC_COUNTRY_ASSIGNMENTS = {
-  "Abhishek":  ["Nigeria","Nepal","Malaysia","China","India"],
-  "Aditi":     ["China","Nepal","Taiwan","Thailand","India"],
-  "Akssheda":  ["Philippines","Bangladesh","Indonesia","US - Dom","India"],
-  "Devansh":   ["Bangladesh","Pakistan","Malaysia","Nepal","India"],
-  "Ishika":    ["Nigeria","Philippines","Aus-Dom/UK-Dom","Thailand","India"],
-  "Ishita":    ["Philippines","Malaysia","Indonesia","Hong Kong","India"],
-  "Janhavi":   ["Nigeria","Philippines","Vietnam","Aus-Dom/UK-Dom","India"],
-  "Nikhil":    ["Thailand","Taiwan","Hong Kong","China","India"],
-  "Pooja":     ["China","Hong Kong","Indonesia","UK-Dom/US-Dom","India"],
-  "Shivansh":  ["Vietnam","Bangladesh","Pakistan","Taiwan","India"],
-  "Shravasti": ["Hong Kong","China","Thailand","Taiwan","India"],
+  "Aditi":     ["UK - Dom","Bangladesh","Indonesia","Pakistan","India"],
+  "Akhil":     ["Malaysia","Indonesia","Nepal","Nigeria","India"],
+  "Ankita":    ["Nigeria","UK - Dom","Taiwan","Vietnam","India"],
+  "Ishika":    ["Japan","US - Dom","South Korea","Vietnam","India"],
+  "Ishita":    ["Malaysia","Nigeria","South Korea","Nepal","India"],
+  "Janhavi":   ["Indonesia","Nigeria","Thailand","UK - Dom","India"],
+  "Nikhil":    ["Hong Kong","Japan","Taiwan","Thailand","India"],
+  "Pooja":     ["US - Dom","Indonesia","Nepal","UK - Dom","India"],
+  "Riddhika":  ["Nepal","Nigeria","Thailand","UK - Dom","India"],
+  "Shivansh":  ["Hong Kong","Pakistan","Bangladesh","Vietnam","India"],
+  "Shravasti": ["Nepal","Taiwan","Thailand","Malaysia","India"],
+  "Swarnim":   ["Hong Kong","Indonesia","Malaysia","South Korea","India"],
 };
 const POC_ORDER_T2B = Object.keys(POC_COUNTRY_ASSIGNMENTS);
 // Country → list of POCs assigned to it, in POC_ORDER_T2B order.
@@ -976,8 +976,8 @@ function normalizeProspect(r){
     poc: poc ? titleCase(poc) : "—",
     month, monthSort: mSort,
     reachDate,
-    region: deriveRegion(norm(getCell(r,"Source Country")), mSort),
-    source: normalizeSourceCountry(getCell(r,"Source Country")) || "—",
+    region: deriveRegion(norm(getCell(r,"Source Country","")), mSort),
+    source: normalizeSourceCountry(getCell(r,"Source Country","")) || "—",
     destination: dest || "—",
     partner, channel: norm(getCell(r,"Channel link")),
     email: norm(getCell(r,"Email")),
