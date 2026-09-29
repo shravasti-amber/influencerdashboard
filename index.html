@@ -555,6 +555,11 @@
             </table>
           </div>
         </div>
+        <div class="mt-3 pt-3 border-t border-zinc-200 overflow-x-auto">
+          <table class="w-full text-xs">
+            <tbody id="vp-assignments-tbody-india" class="divide-y divide-zinc-100"></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Table 2: Source Country x Reachout Status -->
@@ -2266,17 +2271,21 @@ function renderVpTab(){
     if (t2Foot) t2Foot.innerHTML = `<tr class="border-t-2 border-zinc-300">${fCells2}</tr>`;
   }
 
-  // ── Source Country → Assigned POC reference table (split into 2 columns) ──
+  // ── Source Country → Assigned POC reference table (split into 2 columns, India as a
+  // common row below both — it's shared by every POC, not a per-column focus pick) ──
   const assignRowHtml = country => `
       <tr class="hover:bg-zinc-50">
         <td class="px-3 py-2 font-medium">${escapeHtml(country)}</td>
         <td class="px-3 py-2">${country === "India" ? "Everyone" : escapeHtml(COUNTRY_TO_POCS[country].join(", "))}</td>
       </tr>`;
-  const assignSplit = Math.ceil(FOCUS_COUNTRY_ORDER.length / 2);
+  const nonIndiaFocusCountries = FOCUS_COUNTRY_ORDER.filter(c => c !== "India");
+  const assignSplit = Math.ceil(nonIndiaFocusCountries.length / 2);
   const assignTbody1 = document.getElementById("vp-assignments-tbody-1");
   const assignTbody2 = document.getElementById("vp-assignments-tbody-2");
-  if (assignTbody1) assignTbody1.innerHTML = FOCUS_COUNTRY_ORDER.slice(0, assignSplit).map(assignRowHtml).join("");
-  if (assignTbody2) assignTbody2.innerHTML = FOCUS_COUNTRY_ORDER.slice(assignSplit).map(assignRowHtml).join("");
+  const assignTbodyIndia = document.getElementById("vp-assignments-tbody-india");
+  if (assignTbody1) assignTbody1.innerHTML = nonIndiaFocusCountries.slice(0, assignSplit).map(assignRowHtml).join("");
+  if (assignTbody2) assignTbody2.innerHTML = nonIndiaFocusCountries.slice(assignSplit).map(assignRowHtml).join("");
+  if (assignTbodyIndia) assignTbodyIndia.innerHTML = assignRowHtml("India");
 
   // ── TABLE 3: Channel-wise Onboarded (VP copy) ──
   renderVpChannelOnboarded(rows);
