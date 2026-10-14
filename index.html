@@ -718,19 +718,34 @@ const PAID_AFF_MAP = {
 };
 const PLATFORM_COLORS = ["#6366f1","#ec4899","#f59e0b","#06b6d4","#10b981","#8b5cf6","#ef4444","#64748b"];
 const EXCLUDED_POCS = new Set(["Mehak","Tanisha"]);
-// Active roster, effective August 2026 onward — team members who have left are hidden
-// from that month forward, but their historical (pre-Aug-2026) rows still count everywhere.
+// Active rosters. Team members who have left are hidden from the month they left onward,
+// but their historical rows (before that month) still count everywhere.
+//  - before Aug 2026: everyone counts
+//  - Aug–Sep 2026: ACTIVE_ROSTER_FROM_AUG_2026
+//  - Oct 2026 onward: ACTIVE_ROSTER_FROM_OCT_2026
 const ROSTER_CUTOFF = new Date(2026, 7, 1).getTime(); // Aug 1 2026 (month index 7 = August)
+const ROSTER_CUTOFF_OCT = new Date(2026, 9, 1).getTime(); // Oct 1 2026
 const ACTIVE_ROSTER_FROM_AUG_2026 = new Set([
   "Akssheda","Ishita","Janhavi","Pooja","Devansh","Nikhil","Akhil","Aditi", // Interns
   "Abhishek","Ishika","Shravasti","Shivansh","Royce","Palash", // FTEs (+ Assoc. Manager, Manager)
 ]);
+const ACTIVE_ROSTER_FROM_OCT_2026 = new Set([
+  "Palash",                                                          // Manager
+  "Ishika","Shravasti","Shivansh","Pooja","Ishita",                  // FTEs
+  "Janhavi","Nikhil","Akhil","Ankita","Riddhika","Shravani.H","Akssheda", // Interns
+  "Aditi","Swarnim",
+]);
+// The roster in force for a given month (monthSort timestamp), or null = everyone.
+function rosterForMonthSort(monthSort){
+  if (monthSort < ROSTER_CUTOFF) return null;
+  return monthSort < ROSTER_CUTOFF_OCT ? ACTIVE_ROSTER_FROM_AUG_2026 : ACTIVE_ROSTER_FROM_OCT_2026;
+}
 // True if this row's POC should be shown, given the row's own month.
 // Rows before August 2026 always show (nobody is retroactively hidden);
 // rows from August 2026 onward only show for people still on the active roster.
 function isActiveForRow(poc, monthSort){
-  if (monthSort < ROSTER_CUTOFF) return true;
-  return ACTIVE_ROSTER_FROM_AUG_2026.has(poc);
+  const roster = rosterForMonthSort(monthSort);
+  return roster ? roster.has(poc) : true;
 }
 const TARGET_REACHOUTS = 120;
 const TARGET_ONBOARDS = 4;
@@ -770,6 +785,8 @@ function deriveRegion(sourceCountry, monthSort) {
 const MONTH_NUM = { january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11 };
 function norm(v){return (v??"").toString().trim();}
 function titleCase(s){return s.toLowerCase().replace(/\b\w/g, c=>c.toUpperCase());}
+// "Shravani.H" is a different person from plain "Shravani"; fold spacing/punctuation variants of her name.
+function canonPoc(s){ return /^shravani[\s._-]*h$/i.test((s||"").trim()) ? "Shravani.H" : titleCase(s); }
 // Canonical source-country normalizer — the single source of truth for folding
 // spelling/casing variants ("Aus", "AUS", "Australia - Dom" → "Australia", etc.)
 // so every chart/table that groups by source country agrees with every other one.
@@ -803,7 +820,7 @@ const POC_COUNTRY_ASSIGNMENTS = {
   "Pooja":     ["US - Dom","Indonesia","Nepal","UK - Dom","India"],
   "Riddhika":  ["Nepal","Nigeria","Thailand","UK - Dom","India"],
   "Shivansh":  ["Hong Kong","Pakistan","Bangladesh","Vietnam","India"],
-  "Shravasti": ["Nepal","Taiwan","Thailand","Malaysia","India"],
+  "Shravasti": ["Nepal","Taiwan","Thailand","UK - Dom","India"],
   "Swarnim":   ["Hong Kong","Indonesia","Malaysia","South Korea","India"],
 };
 const POC_ORDER_T2B = Object.keys(POC_COUNTRY_ASSIGNMENTS);
@@ -978,7 +995,7 @@ function normalizeProspect(r){
     }
   }
   return {
-    poc: poc ? titleCase(poc) : "—",
+    poc: poc ? canonPoc(poc) : "—",
     month, monthSort: mSort,
     reachDate,
     region: deriveRegion(norm(getCell(r,"Source Country","")), mSort),
@@ -1021,7 +1038,7 @@ function normalizeVideo(r){
   const contentType = CT_CANONICAL[ctKey] || rawCT;
   const actRaw = norm(getCell(r,"Activity"));
   return {
-    poc: titleCase(poc),
+    poc: canonPoc(poc),
     date, month, monthSort: monthSortKey(month),
     activity: actRaw || "—",
     isCrossPosted: !actRaw, // true when Activity column is blank
@@ -2114,8 +2131,9 @@ function renderVpTab(){
   // is active and it is NOT UK/USA/AUS, this will simply produce empty rows.
   const t1Rows = rows.filter(r =>
     t1MonthFilter.includes(r.month) &&
-    DOMESTIC_SOURCES.includes(normSource(r.source)) &&
-    r.reachDate !== null
+    DOMESTIC_SOURCES.includes(normSource(r.source))
+    // NOTE: no reachDate requirement — prospects without a reachout date still belong to
+    // their Month and are counted by every other chart (Top source countries, Table 2, ...).
   );
 
   const t1Head = document.getElementById("vp-table1-thead");
@@ -2142,9 +2160,11 @@ function renderVpTab(){
       let rowTotal = 0;
       let cellsHtml = `<td class="px-3 py-2 font-medium bg-white sticky left-0 z-10">${escapeHtml(src)}</td>`;
 
+      // Grand Total = every prospect for this source in the selected months (same basis as
+      // Table 2 and the Prospects-tab charts), including any with a blank/unmapped status.
+      rowTotal = srcRows.length;
       STATUSES_T1.forEach((st, idx) => {
         const count = srcRows.filter(r => matchStatus(r, st)).length;
-        rowTotal += count;
         colTotals[idx] += count;
         cellsHtml += `<td class="px-2 py-2 text-right tabular-nums ${count === 0 ? "text-zinc-300" : ""}">${blank(count)}</td>`;
       });
@@ -2554,9 +2574,9 @@ function renderPocBreakdownTable(rows){
   // roster as of" is ambiguous across a mixed month range.
   const pocScopeMonthSort = targetMonth ? monthSortKey(targetMonth) : null;
   const rosterPocNames = pocScopeMonthSort !== null
-    ? (pocScopeMonthSort < ROSTER_CUTOFF
+    ? (rosterForMonthSort(pocScopeMonthSort) === null
         ? [...new Set(rows.filter(r=>r.month===targetMonth).map(r=>r.poc))]
-        : [...ACTIVE_ROSTER_FROM_AUG_2026])
+        : [...rosterForMonthSort(pocScopeMonthSort)])
     : [...new Set(rows.map(r=>r.poc))];
   const pocNames = [...new Set(rosterPocNames)].filter(p=>p&&p!=="—"&&!EXCLUDED_MANAGER.has(p))
     .sort((a,b)=>a.localeCompare(b));
