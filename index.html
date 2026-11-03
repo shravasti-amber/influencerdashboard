@@ -787,7 +787,13 @@ const MONTH_NUM = { january:0,february:1,march:2,april:3,may:4,june:5,july:6,aug
 function norm(v){return (v??"").toString().trim();}
 function titleCase(s){return s.toLowerCase().replace(/\b\w/g, c=>c.toUpperCase());}
 // "Shravani.H" is a different person from plain "Shravani"; fold spacing/punctuation variants of her name.
-function canonPoc(s){ return /^shravani[\s._-]*h$/i.test((s||"").trim()) ? "Shravani.H" : titleCase(s); }
+// "Anushka L" (her sheet/POC name) folds to "Anushka", the name used on the roster.
+function canonPoc(s){
+  const t = (s||"").trim();
+  if (/^shravani[\s._-]*h$/i.test(t)) return "Shravani.H";
+  if (/^anushka(?:[\s._-]*l\.?)?$/i.test(t)) return "Anushka";
+  return titleCase(s);
+}
 // Canonical source-country normalizer — the single source of truth for folding
 // spelling/casing variants ("Aus", "AUS", "Australia - Dom" → "Australia", etc.)
 // so every chart/table that groups by source country agrees with every other one.
