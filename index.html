@@ -728,12 +728,13 @@ const ROSTER_CUTOFF_OCT = new Date(2026, 9, 1).getTime(); // Oct 1 2026
 const ACTIVE_ROSTER_FROM_AUG_2026 = new Set([
   "Akssheda","Ishita","Janhavi","Pooja","Devansh","Nikhil","Akhil","Aditi", // Interns
   "Abhishek","Ishika","Shravasti","Shivansh","Royce","Palash", // FTEs (+ Assoc. Manager, Manager)
+  "Swarnim",
 ]);
 const ACTIVE_ROSTER_FROM_OCT_2026 = new Set([
   "Palash",                                                          // Manager
   "Ishika","Shravasti","Shivansh","Pooja","Ishita",                  // FTEs
   "Janhavi","Nikhil","Akhil","Ankita","Riddhika","Shravani.H","Akssheda", // Interns
-  "Aditi","Swarnim",
+  "Aditi","Swarnim","Anushka", // Interns
 ]);
 // The roster in force for a given month (monthSort timestamp), or null = everyone.
 function rosterForMonthSort(monthSort){
@@ -767,7 +768,7 @@ const SOURCE_REGION_MAP = (() => {
   add("SEA",
     "Malaysia","Hong Kong","Indonesia","Japan",
     "Phillipines","Philippines","Singapore","South Korea",
-    "Taiwan","Thailand","Vietnam");
+    "Taiwan","Thailand","Vietnam","Cambodia");
   add("Subcontinent", "Bangladesh","China","Nepal","Pakistan","Sri Lanka");
   add("UK", "UK","United Kingdom","Uk","UK - Dom","UK-Dom");
   add("USA", "USA","United States","Us","U.S.","U.S.A.","US - Dom","US-Dom");
@@ -799,7 +800,19 @@ function normalizeSourceCountry(s){
   if (lower.startsWith("aus") || lower.includes("australia")) return "Australia";
   if (lower.startsWith("uk") || lower.includes("united kingdom")) return "UK - Dom";
   if (lower.startsWith("us") || lower.includes("united states")) return "US - Dom";
+  if (/^phil+ip+ines?$/.test(lower)) return "Philippines";
   return titleCase(val);
+}
+// The only source countries offered in the Source Country dropdown on every tab.
+const SOURCE_DROPDOWN_COUNTRIES = [
+  "UK - Dom","Bangladesh","Indonesia","Pakistan","Malaysia","Nepal","Nigeria","Taiwan","Vietnam",
+  "Japan","US - Dom","South Korea","Thailand","Hong Kong","Philippines","Australia","Cambodia","China",
+].sort((a,b)=>a.localeCompare(b));
+// Dropdown options for the Source Country filter, narrowed to the selected Source Region(s).
+// No region selected → the full list.
+function sourceCountriesForRegions(regionSet){
+  if (!regionSet || !regionSet.size) return SOURCE_DROPDOWN_COUNTRIES.slice();
+  return SOURCE_DROPDOWN_COUNTRIES.filter(c => regionSet.has(SOURCE_REGION_MAP[c.toLowerCase()]));
 }
 // Source countries the Views/Spend-by-Source-Country charts (Growth Tracker tab) are
 // scoped to. Canonical labels match normalizeSourceCountry()'s output.
@@ -1238,6 +1251,7 @@ function buildFilters(hostId, dataset, filterMap, onChange, rowKeys){
       const set = filterMap[k].set;
       if (cb.checked) set.add(v); else set.delete(v);
       updateBtnLabel(host, k, set);
+      if (filterMap[k].afterChange) filterMap[k].afterChange();
       onChange();
     });
   });
@@ -1252,9 +1266,30 @@ function buildFilters(hostId, dataset, filterMap, onChange, rowKeys){
         if (c.checked) set.add(c.value);
       });
       updateBtnLabel(host, key, set);
+      if (filterMap[key].afterChange) filterMap[key].afterChange();
       onChange();
     });
   });
+}
+// Re-render the Source Country checkbox list inside `hostId` so it only offers `countries`.
+// Any selected country that is no longer offered is dropped from the filter set.
+function setSourceOptions(hostId, filterMap, countries, onChange){
+  const host = document.getElementById(hostId); if (!host) return;
+  const list = host.querySelector('[data-list="source"]'); if (!list) return;
+  const set = filterMap.source.set;
+  for (const v of [...set]) if (!countries.includes(v)) set.delete(v);
+  list.querySelectorAll("label").forEach(l => l.remove());
+  countries.forEach(v => {
+    const lab = document.createElement("label");
+    lab.innerHTML = `<input type="checkbox" value="${escapeAttr(v)}" data-filter="source" ${set.has(v) ? "checked" : ""} /> <span>${escapeHtml(v)}</span>`;
+    lab.querySelector("input").addEventListener("change", ev => {
+      if (ev.target.checked) set.add(v); else set.delete(v);
+      updateBtnLabel(host, "source", set);
+      onChange();
+    });
+    list.appendChild(lab);
+  });
+  updateBtnLabel(host, "source", set);
 }
 document.addEventListener("click", e => {
   if (!e.target.closest(".multiselect")){
@@ -1299,6 +1334,7 @@ function renderActiveChips(tab, hostId, totalRows){
       const cb = filterHost.querySelector(`input[data-filter="${el.dataset.rmK}"][value="${CSS.escape(el.dataset.rmV)}"]`);
       if (cb) cb.checked = false;
       updateBtnLabel(filterHost, el.dataset.rmK, state.filters[el.dataset.rmTab][el.dataset.rmK]);
+      if (tab === "prospects" && el.dataset.rmK === "region") syncProspectSourceOptions();
       if (tab === "prospects") applyProspectFilters(); else applyVideoFilters();
     });
   });
@@ -1336,7 +1372,7 @@ const PROSPECT_FILTERS = {
   status:     { label:"Status", field:"status", set:null },
   // Row 2
   region:     { label:"Source Region", field:"region", set:null, options: [...CANONICAL_REGIONS].sort() },
-  source:     { label:"Source Country", field:"source", set:null },
+  source:     { label:"Source Country", field:"source", set:null, options: SOURCE_DROPDOWN_COUNTRIES },
   destination:{ label:"Destination Country", field:"destination", set:null },
   foundVia:   { label:"Found Via", field:"foundVia", set:null },
 };
@@ -1346,6 +1382,9 @@ const PROSPECT_FILTERS_ROW1 = ["poc","month","platform","status"];
 
 function buildProspectFilters(){
   for (const [k] of Object.entries(PROSPECT_FILTERS)) PROSPECT_FILTERS[k].set = state.filters.prospects[k];
+  // Source Country options follow the selected Source Region(s)
+  PROSPECT_FILTERS.source.options = sourceCountriesForRegions(state.filters.prospects.region);
+  PROSPECT_FILTERS.region.afterChange = () => syncProspectSourceOptions();
   // Filter out months before January 2026 from the month dropdown
   const JAN_2026 = new Date(2026, 0, 1).getTime();
   const prospectsFrom2026 = state.datasets.prospects.filter(r => monthSortKey(r.month) >= JAN_2026);
@@ -1358,6 +1397,10 @@ function buildProspectFilters(){
     region: CANONICAL_REGIONS.has(r.region) ? r.region : undefined,
   }));
   buildFilters("filters-prospects", filterDataset, PROSPECT_FILTERS, applyProspectFilters, PROSPECT_FILTERS_ROW1);
+}
+
+function syncProspectSourceOptions(){
+  setSourceOptions("filters-prospects", PROSPECT_FILTERS, sourceCountriesForRegions(state.filters.prospects.region), applyProspectFilters);
 }
 
 function applyProspectFilters(){
@@ -1908,7 +1951,7 @@ function setVpT2Sort(mode){
 const VP_FILTERS = {
   month:       { label:"Month", field:"month", set:null, sort:(a,b)=>monthSortKey(a)-monthSortKey(b) },
   destination: { label:"Destination Country", field:"destination", set:null },
-  source:      { label:"Source Country", field:"source", set:null },
+  source:      { label:"Source Country", field:"source", set:null, options: SOURCE_DROPDOWN_COUNTRIES },
   region:      { label:"Source Region", field:"region", set:null },
 };
 
@@ -1916,6 +1959,7 @@ function buildVpFilters(){
   for (const k of Object.keys(VP_FILTERS)) VP_FILTERS[k].set = state.filters.vp[k];
   const JAN_2026 = new Date(2026,0,1).getTime();
   const rows2026 = state.datasets.prospects.filter(r => monthSortKey(r.month) >= JAN_2026);
+  VP_FILTERS.source.options = sourceCountriesForRegions(state.filters.vp.region);
   // For region filter: only rows that have a valid region assigned
   const rows2026WithRegion = rows2026.filter(r => r.region && CANONICAL_REGIONS.has(r.region));
   const filters2026 = { ...VP_FILTERS };
@@ -1953,12 +1997,16 @@ function buildVpFilters(){
         else state.filters.vp.region.delete(cb.value);
         const lbl = state.filters.vp.region.size === 0 ? "All" : [...state.filters.vp.region].sort().join(", ");
         document.getElementById("vp-region-label").textContent = lbl;
+        syncVpSourceOptions();
         applyVpFilters();
       });
     });
   }
 }
 
+function syncVpSourceOptions(){
+  setSourceOptions("filters-vp", VP_FILTERS, sourceCountriesForRegions(state.filters.vp.region), applyVpFilters);
+}
 window.toggleVpRegionDropdown = function(){
   const dd = document.getElementById("vp-region-dropdown");
   if (dd) dd.classList.toggle("hidden");
@@ -1991,6 +2039,13 @@ function renderActiveChipsVp(totalRows){
       const cb = filterHost.querySelector(`input[data-filter="${el.dataset.rmVpK}"][value="${CSS.escape(el.dataset.rmVpV)}"]`);
       if (cb) cb.checked = false;
       updateBtnLabel(filterHost, el.dataset.rmVpK, state.filters.vp[el.dataset.rmVpK]);
+      if (el.dataset.rmVpK === "region") {
+        const rcb = filterHost.querySelector(`.vp-region-cb[value="${CSS.escape(el.dataset.rmVpV)}"]`);
+        if (rcb) rcb.checked = false;
+        const rl2 = document.getElementById("vp-region-label");
+        if (rl2) rl2.textContent = state.filters.vp.region.size === 0 ? "All" : [...state.filters.vp.region].sort().join(", ");
+        syncVpSourceOptions();
+      }
       applyVpFilters();
     });
   });
@@ -2009,6 +2064,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Reset region label
     const rl = document.getElementById("vp-region-label");
     if (rl) rl.textContent = "All";
+    syncVpSourceOptions();
     applyVpFilters();
   });
 });
@@ -2737,6 +2793,7 @@ function renderPocBreakdownTable(rows){
   STATUS_COLS.forEach(col => {
     headerCells += `<th class="px-3 py-2 text-right">${escapeHtml(col.label)}</th>`;
   });
+  headerCells += `<th class="px-3 py-2 text-right text-rose-600">Lost</th>`;
   headerCells += `<th class="${grandThCls}" onclick="setPocBdSort(state.pocBdSort==='grand'?'alpha':'grand')" title="Click to sort high to low">Grand Total ${grandActive ? "▼" : "⇅"}</th>`;
   headerCells += `<th class="px-3 py-2 text-right bg-yellow-50 text-yellow-700 font-semibold">Response Rate</th>`;
   if (thead) thead.innerHTML = `<tr>${headerCells}</tr>`;
@@ -2748,7 +2805,7 @@ function renderPocBreakdownTable(rows){
   if (pocGrandBtn) pocGrandBtn.className = state.pocBdSort === "grand" ? "px-2.5 py-1 bg-indigo-600 text-white font-medium" : "px-2.5 py-1 bg-white text-zinc-600 hover:bg-zinc-50";
 
   const colTotals = new Array(STATUS_COLS.length).fill(0);
-  let grandTotalAll = 0;
+  let grandTotalAll = 0, lostTotalAll = 0;
 
   tbody.innerHTML = pocNamesSorted.map((poc, rowIdx) => {
     const pocRows = rows.filter(r => r.poc === poc);
@@ -2756,6 +2813,8 @@ function renderPocBreakdownTable(rows){
     vals.forEach((n,i) => colTotals[i] += n);
     const grand = pocRows.length;
     grandTotalAll += grand;
+    const lostN = pocRows.filter(r => r.status === "Lost").length;
+    lostTotalAll += lostN;
     const onbIdx = STATUS_COLS.findIndex(c=>c.key==="Onboarded");
     const repIdx = STATUS_COLS.findIndex(c=>c.key==="Replied");
     const responseRate = grand > 0 ? (((vals[onbIdx]+vals[repIdx])/grand)*100).toFixed(2)+"%" : "—";
@@ -2764,6 +2823,7 @@ function renderPocBreakdownTable(rows){
     vals.forEach(n => {
       cells += `<td class="px-3 py-2 text-right tabular-nums ${n===0?"text-zinc-200":""}"> ${blank(n)}</td>`;
     });
+    cells += `<td class="px-3 py-2 text-right tabular-nums ${lostN===0?"text-zinc-200":"text-rose-600"}">${blank(lostN)}</td>`;
     cells += `<td class="px-3 py-2 text-right tabular-nums font-semibold">${grand}</td>`;
     cells += `<td class="px-3 py-2 text-right tabular-nums bg-yellow-50 text-yellow-700 font-medium">${responseRate}</td>`;
     return `<tr class="${zebraBase} hover:bg-indigo-50">${cells}</tr>`;
@@ -2774,6 +2834,7 @@ function renderPocBreakdownTable(rows){
   const grandRR  = grandTotalAll > 0 ? (((grandOnb+grandRep)/grandTotalAll)*100).toFixed(2)+"%" : "—";
   let footCells = `<td class="px-3 py-2 font-bold sticky left-0 bg-zinc-50 z-10">Grand Total</td>`;
   colTotals.forEach(n => { footCells += `<td class="px-3 py-2 text-right tabular-nums font-bold">${n||""}</td>`; });
+  footCells += `<td class="px-3 py-2 text-right tabular-nums font-bold text-rose-600">${lostTotalAll||""}</td>`;
   footCells += `<td class="px-3 py-2 text-right tabular-nums font-bold">${grandTotalAll}</td>`;
   footCells += `<td class="px-3 py-2 text-right tabular-nums font-bold bg-yellow-50 text-yellow-700">${grandRR}</td>`;
   if (tfoot) tfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">${footCells}</tr>`;
@@ -2809,7 +2870,7 @@ const VIDEO_FILTERS = {
   poc:        { label:"POC", field:"poc", set:null },
   month:      { label:"Month", field:"month", set:null, sort:(a,b)=>monthSortKey(a)-monthSortKey(b) },
   channel:    { label:"Channel", field:"channel", set:null },
-  source:     { label:"Source Country", field:"source", set:null },
+  source:     { label:"Source Country", field:"source", set:null, options: SOURCE_DROPDOWN_COUNTRIES },
   destination:{ label:"Destination Country", field:"destination", set:null },
   paidAff:    { label:"Paid / Affiliate", field:"paidAff", set:null },
 };
@@ -3727,6 +3788,7 @@ document.querySelectorAll("[data-reset]").forEach(btn => {
     const host = document.getElementById(tab === "prospects" ? "filters-prospects" : "filters-videos");
     host.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
     host.querySelectorAll("[data-toggle]").forEach(b => b.textContent = "All");
+    if (tab === "prospects") syncProspectSourceOptions();
     if (tab === "prospects") applyProspectFilters(); else applyVideoFilters();
   });
 });
