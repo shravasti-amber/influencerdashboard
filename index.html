@@ -3929,5 +3929,54 @@ async function loadSample(){
 document.getElementById("load-sample").addEventListener("click", loadSample);
 document.getElementById("load-sample-2").addEventListener("click", loadSample);
 </script>
+
+<script>
+// ── Hide / show chart & table cards (all tabs). Not remembered: everything reappears on refresh. ──
+(function(){
+  function init(){
+    document.querySelectorAll("[data-tab-content]").forEach(tab => {
+      const all = [...tab.querySelectorAll("div.bg-white.rounded-xl.border")].filter(c => c.querySelector("h3"));
+      const cards = all.filter(c => !c.parentElement.closest("div.bg-white.rounded-xl.border"));
+      if (!cards.length) return;
+      const bar = document.createElement("div");
+      bar.className = "hidden flex flex-wrap items-center gap-2 text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2";
+      tab.insertBefore(bar, tab.firstChild);
+      const hiddenSet = new Set();
+      const titleOf = c => (c.querySelector("h3").textContent || "Untitled").trim();
+      function renderBar(){
+        if (!hiddenSet.size){ bar.classList.add("hidden"); bar.innerHTML = ""; return; }
+        bar.classList.remove("hidden");
+        bar.innerHTML = `<span class="font-semibold text-zinc-500">Hidden (${hiddenSet.size}):</span>` +
+          [...hiddenSet].map((c,i) => `<button type="button" data-restore="${i}" class="px-2 py-1 rounded-md border border-zinc-300 bg-white hover:bg-indigo-50 hover:text-indigo-700" title="Show again">+ ${titleOf(c).replace(/</g,"&lt;")}</button>`).join("") +
+          `<button type="button" data-restore-all class="ml-auto px-2 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">Show all</button>`;
+        const list = [...hiddenSet];
+        bar.querySelectorAll("[data-restore]").forEach(b => b.addEventListener("click", () => show(list[+b.dataset.restore])));
+        const ra = bar.querySelector("[data-restore-all]");
+        if (ra) ra.addEventListener("click", () => [...hiddenSet].forEach(show));
+      }
+      function hide(c){ c.style.display = "none"; hiddenSet.add(c); renderBar(); }
+      function show(c){
+        c.style.display = ""; hiddenSet.delete(c); renderBar();
+        // let Chart.js re-measure charts that were rendered while hidden
+        setTimeout(() => window.dispatchEvent(new Event("resize")), 50);
+      }
+      cards.forEach(c => {
+        if (getComputedStyle(c).position === "static") c.style.position = "relative";
+        const row = c.querySelector("h3").closest(".flex") || c.querySelector("h3").parentElement;
+        if (row && c.contains(row)) row.style.paddingRight = "1.75rem";
+        const btn = document.createElement("button");
+        btn.type = "button"; btn.title = "Hide this section"; btn.setAttribute("aria-label", "Hide this section");
+        btn.textContent = "\u00d7";
+        btn.style.cssText = "position:absolute;top:8px;right:10px;width:20px;height:20px;line-height:18px;font-size:16px;color:#a1a1aa;border-radius:6px;text-align:center;cursor:pointer;z-index:5;background:transparent;border:0";
+        btn.addEventListener("mouseenter", () => { btn.style.background = "#f4f4f5"; btn.style.color = "#52525b"; });
+        btn.addEventListener("mouseleave", () => { btn.style.background = "transparent"; btn.style.color = "#a1a1aa"; });
+        btn.addEventListener("click", () => hide(c));
+        c.appendChild(btn);
+      });
+    });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+})();
+</script>
 </body>
 </html>
