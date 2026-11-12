@@ -237,7 +237,7 @@
       </div>
     </section>
 
-    <section id="kpi-row-videos" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3"></section>
+    <section id="kpi-row-videos" class="grid grid-cols-2 md:grid-cols-5 gap-3"></section>
 
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
@@ -318,33 +318,6 @@
         </div>
       </div>
 
-      <!-- POC Performance Leaderboard -->
-      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
-        <div class="flex items-center justify-between mb-3">
-          <div>
-            <h3 class="font-semibold text-sm">POC performance</h3>
-            <p class="text-xs text-zinc-500 mt-0.5">views · traffic · leads · bookforms · bookings by POC</p>
-          </div>
-        </div>
-        <div class="overflow-x-auto max-h-[500px] overflow-y-auto relative">
-          <table class="w-full text-xs">
-            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px] sticky top-0 shadow-sm z-10">
-              <tr>
-                <th class="px-3 py-2 text-left bg-zinc-50">POC</th>
-                <th class="px-3 py-2 text-right bg-zinc-50">Videos</th>
-                <th class="px-3 py-2 text-right bg-zinc-50">Views</th>
-                <th class="px-3 py-2 text-right bg-zinc-50">Traffic</th>
-                <th class="px-3 py-2 text-right text-emerald-700 bg-emerald-50">Leads</th>
-                <th class="px-3 py-2 text-right text-emerald-700 bg-emerald-50">Bookforms</th>
-                <th class="px-3 py-2 text-right text-emerald-700 bg-emerald-50">Bookings</th>
-                <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Spend</th>
-              </tr>
-            </thead>
-            <tbody id="tbl-poc-tbody" class="divide-y divide-zinc-100"></tbody>
-            <tfoot id="tbl-poc-tfoot" class="bg-zinc-50 font-semibold sticky bottom-0 shadow-sm z-10"></tfoot>
-          </table>
-        </div>
-      </div>
 
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-6">
         <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Source country → leads</h3><span class="text-xs text-zinc-500">top sources driving traffic & leads</span></div>
@@ -395,7 +368,7 @@
         <div class="flex items-center justify-between mb-3">
           <div>
             <h3 class="font-semibold text-sm">Influencer Leaderboard</h3>
-            <p class="text-xs text-zinc-500 mt-0.5">performance by unique influencer · aggregated across all activities</p>
+            <p class="text-xs text-zinc-500 mt-0.5">top 5 influencers by views · aggregated across all activities · follows the filters above</p>
           </div>
         </div>
         <div class="overflow-x-auto max-h-[500px] overflow-y-auto relative">
@@ -423,7 +396,7 @@
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
         <div class="mb-3">
           <h3 class="font-semibold text-sm">Views by Source Country</h3>
-          <p class="text-xs text-zinc-500 mt-0.5" id="vp-views-subtitle">focus source countries · Growth Tracker views · India excluded from highlights</p>
+          <p class="text-xs text-zinc-500 mt-0.5" id="vp-views-subtitle">top 5 source countries by views</p>
         </div>
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4" id="vp-views-highlights"></div>
         <div class="h-[420px]"><canvas id="ch-vp-views"></canvas></div>
@@ -433,7 +406,7 @@
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
         <div class="mb-3">
           <h3 class="font-semibold text-sm">Spend by Source Country</h3>
-          <p class="text-xs text-zinc-500 mt-0.5" id="vp-spend-subtitle">focus source countries · Growth Tracker budget · India excluded from highlights</p>
+          <p class="text-xs text-zinc-500 mt-0.5" id="vp-spend-subtitle">top 5 source countries by spend</p>
         </div>
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4" id="vp-spend-highlights"></div>
         <div class="h-[420px] mb-4"><canvas id="ch-vp-spend"></canvas></div>
@@ -441,6 +414,34 @@
           <table class="w-full text-xs" id="vp-efficiency-table">
             <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px]" id="vp-efficiency-thead"></thead>
             <tbody id="vp-efficiency-tbody" class="divide-y divide-zinc-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- POC Performance Leaderboard -->
+      <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="font-semibold text-sm">POC performance</h3>
+            <p class="text-xs text-zinc-500 mt-0.5">sorted by videos live · views · traffic · leads · bookforms · bookings by POC</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto max-h-[500px] overflow-y-auto relative">
+          <table class="w-full text-xs">
+            <thead class="bg-zinc-50 text-zinc-500 uppercase tracking-wide text-[11px] sticky top-0 shadow-sm z-10">
+              <tr>
+                <th class="px-3 py-2 text-left bg-zinc-50">POC</th>
+                <th class="px-3 py-2 text-right bg-zinc-50">Videos</th>
+                <th class="px-3 py-2 text-right bg-zinc-50">Views</th>
+                <th class="px-3 py-2 text-right bg-zinc-50">Traffic</th>
+                <th class="px-3 py-2 text-right text-emerald-700 bg-emerald-50">Leads</th>
+                <th class="px-3 py-2 text-right text-emerald-700 bg-emerald-50">Bookforms</th>
+                <th class="px-3 py-2 text-right text-emerald-700 bg-emerald-50">Bookings</th>
+                <th class="px-3 py-2 text-right bg-violet-50 text-violet-700">Spend</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-poc-tbody" class="divide-y divide-zinc-100"></tbody>
+            <tfoot id="tbl-poc-tfoot" class="bg-zinc-50 font-semibold sticky bottom-0 shadow-sm z-10"></tfoot>
           </table>
         </div>
       </div>
@@ -1067,6 +1068,9 @@ function normalizeVideo(r){
   const CT_CANONICAL = { "amber fest":"Amber Fest","amberfest":"Amber Fest","amber  fest":"Amber Fest","study abroad":"Study Abroad","scholarship":"Scholarship","room tour":"Room Tour","visa":"Visa","jobs":"Jobs","gap":"GAP" };
   const contentType = CT_CANONICAL[ctKey] || rawCT;
   const actRaw = norm(getCell(r,"Activity"));
+  const tCore = num(getCell(r,"Traffic (core)","Traffic core"));
+  const tSch  = num(getCell(r,"Traffic (scholarship)","Traffic scholarship"));
+  const tLegacy = num(getCell(r,"Traffic","Traffic (total)","Total traffic"));
   return {
     poc: canonPoc(poc),
     date, month, monthSort: monthSortKey(month),
@@ -1081,7 +1085,11 @@ function normalizeVideo(r){
     destination: dest || "—",
     region: norm(getCell(r,"Broader region by Source Country")) || "",
     views: num(getCell(r,"Total views")),
-    traffic: num(getCell(r,"Traffic")),
+    trafficCore: tCore,
+    trafficSch: tSch,
+    // Total traffic = core + scholarship. Falls back to a single legacy "Traffic" column
+    // when the sheet doesn't have the two new columns.
+    traffic: (tCore || tSch) ? tCore + tSch : tLegacy,
     leads: num(getCell(r,"Leads")),
     bookforms: num(getCell(r,"Bookforms")),
     bookings: num(getCell(r,"Bookings")),
@@ -2974,7 +2982,7 @@ function renderSourceCountryViewsSpend(rows){
         : highlightCard("Fewest Onboarded", "—", "please upload Prospects Sheet to view this", "text-zinc-400"),
     ].join("");
   }
-  const viewsChartData = nonIndiaSources.map(s => [s, viewsBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
+  const viewsChartData = nonIndiaSources.map(s => [s, viewsBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]).slice(0,5); // top 5
   upsertChart("ch-vp-views", {
     type:"bar",
     data:{ labels: viewsChartData.map(d=>d[0]), datasets:[{ label:"Views", data: viewsChartData.map(d=>d[1]),
@@ -2985,7 +2993,7 @@ function renderSourceCountryViewsSpend(rows){
   const viewsSubtitle = document.getElementById("vp-views-subtitle");
   if (viewsSubtitle) viewsSubtitle.textContent = (selectedMonths.length > 0
     ? [...selectedMonths].sort((a,b)=>monthSortKey(a)-monthSortKey(b)).join(", ")
-    : "all months") + " · focus source countries · Growth Tracker views · India excluded from highlights";
+    : "all months") + " · top 5 source countries by views · highlights cover all focus countries";
 
   // ── Spend chart + highlights, plus the spend/views/onboard efficiency table ──
   const spendHighlightsHost = document.getElementById("vp-spend-highlights");
@@ -3007,7 +3015,7 @@ function renderSourceCountryViewsSpend(rows){
       highlightCard("Efficient Despite Low Spend", bestEff?bestEff.s:"—", bestEff?`₹${bestEff.cpv.toFixed(2)} per view`:"no data", "text-emerald-600"),
     ].join("");
   }
-  const spendChartData = nonIndiaSources.map(s => [s, spendBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]);
+  const spendChartData = nonIndiaSources.map(s => [s, spendBySrc.get(s)||0]).sort((a,b)=>b[1]-a[1]).slice(0,5); // top 5
   upsertChart("ch-vp-spend", {
     type:"bar",
     data:{ labels: spendChartData.map(d=>d[0]), datasets:[{ label:"Spend", data: spendChartData.map(d=>d[1]),
@@ -3019,7 +3027,7 @@ function renderSourceCountryViewsSpend(rows){
   const spendSubtitle = document.getElementById("vp-spend-subtitle");
   if (spendSubtitle) spendSubtitle.textContent = (selectedMonths.length > 0
     ? [...selectedMonths].sort((a,b)=>monthSortKey(a)-monthSortKey(b)).join(", ")
-    : "all months") + " · focus source countries · Growth Tracker budget · India excluded from highlights";
+    : "all months") + " · top 5 source countries by spend · highlights and table cover all focus countries";
 
   // Efficiency table: every focus-list source with spend and/or views and/or onboards,
   // sorted by cost-per-view descending so the worst spend-to-return countries surface first.
@@ -3062,6 +3070,9 @@ function renderVideoKPIs(rows){
   const budget = sumField(paidRows, "budget");
   const views = sumField(rows,"views");
   const traffic = sumField(rows,"traffic");
+  const trafficCore = sumField(rows,"trafficCore");
+  const trafficSch = sumField(rows,"trafficSch");
+  const trShare = n => traffic > 0 ? ((n/traffic)*100).toFixed(1)+"% of total traffic" : "";
   const leads = sumField(rows,"leads");
   const bookforms = sumField(rows,"bookforms");
   const bookings = sumField(rows,"bookings");
@@ -3077,7 +3088,9 @@ function renderVideoKPIs(rows){
     { label:"Total spend", value: fmtINR(budget), sub:`${paidRows.length} paid videos` },
     { label:"Views", value: fmtNum(views), sub:`CPV ₹${fmtDecimal(cpv)}` },
     { label:"Avg Views / Video", value: fmtNum(videosLive > 0 ? views / videosLive : 0), sub:`across ${videosLive} videos` },
-    { label:"Traffic", value: fmtNum(traffic), sub: views && leads ? ((leads/traffic)*100).toFixed(2)+"% of traffic → leads" : "" },
+    { label:"Traffic (core)", value: fmtNum(trafficCore), sub: trShare(trafficCore) },
+    { label:"Traffic (scholarship)", value: fmtNum(trafficSch), sub: trShare(trafficSch) },
+    { label:"Total traffic", value: fmtNum(traffic), sub: traffic > 0 && leads ? ((leads/traffic)*100).toFixed(2)+"% of traffic → leads" : "core + scholarship" },
     { label:"Leads", value: fmtNum(leads), sub:`CPL ${fmtINR(cpl)}`, color:"text-emerald-600" },
     { label:"Bookforms", value: fmtNum(bookforms), sub:`CPBF ${fmtINR(cpbf)}` },
     { label:"Bookings", value: fmtNum(bookings), sub:`CPB ${fmtINR(cpb)} · ` + (bookforms? ((bookings/bookforms)*100).toFixed(1)+"% of bookforms" : ""), color:"text-indigo-600" },
@@ -3212,7 +3225,7 @@ function renderVideoCharts(rows){
       bk: sumField(sub, "bookings"),
       bud: sumField(sub, "budget")
     };
-  }).filter(p=>p.n).sort((a,b)=>b.tr-a.tr||b.ld-a.ld);
+  }).filter(p=>p.n).sort((a,b)=>b.n-a.n||b.vw-a.vw||a.poc.localeCompare(b.poc)); // most videos live first
 
   const pocTbody = document.getElementById("tbl-poc-tbody");
   const pocTfoot = document.getElementById("tbl-poc-tfoot");
@@ -3479,10 +3492,11 @@ function renderVideoCharts(rows){
   
   const infRows = [...infAgg.entries()].map(([partner, d]) => ({ partner, ...d })).sort((a,b) => b.vw - a.vw);
   
+  const infTop = infRows.slice(0, 5); // top 5 by views for the current filters (all-time when none)
   const infTbody = document.getElementById("tbl-influencer-tbody");
   const infTfoot = document.getElementById("tbl-influencer-tfoot");
   if (infTbody) {
-    infTbody.innerHTML = infRows.map((d, idx) => {
+    infTbody.innerHTML = infTop.map((d, idx) => {
       const z = idx % 2 === 0 ? "" : "bg-zinc-50/60";
       return `<tr class="hover:bg-indigo-50 ${z}">
         <td class="px-3 py-2 font-medium">${escapeHtml(d.partner)}</td>
@@ -3507,7 +3521,7 @@ function renderVideoCharts(rows){
       const tBud = infRows.reduce((s,d) => s+d.bud, 0);
       
       infTfoot.innerHTML = `<tr class="border-t-2 border-zinc-300">
-        <td class="px-3 py-2 font-bold">Grand Total (${infRows.length} Unique Influencers)</td>
+        <td class="px-3 py-2 font-bold">Top ${infTop.length} shown · Grand Total of all ${infRows.length} Unique Influencers</td>
         <td class="px-3 py-2"></td>
         <td class="px-3 py-2 text-right tabular-nums font-bold text-zinc-500">${tN}</td>
         <td class="px-3 py-2 text-right tabular-nums font-bold">${fmtNum(tVw)}</td>
