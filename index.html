@@ -722,9 +722,11 @@ const EXCLUDED_POCS = new Set(["Mehak","Tanisha"]);
 // but their historical rows (before that month) still count everywhere.
 //  - before Aug 2026: everyone counts
 //  - Aug–Sep 2026: ACTIVE_ROSTER_FROM_AUG_2026
-//  - Oct 2026 onward: ACTIVE_ROSTER_FROM_OCT_2026
+//  - Oct 2026: ACTIVE_ROSTER_FROM_OCT_2026
+//  - Nov 2026 onward: ACTIVE_ROSTER_FROM_NOV_2026 (Akhil and Shravani.H removed)
 const ROSTER_CUTOFF = new Date(2026, 7, 1).getTime(); // Aug 1 2026 (month index 7 = August)
 const ROSTER_CUTOFF_OCT = new Date(2026, 9, 1).getTime(); // Oct 1 2026
+const ROSTER_CUTOFF_NOV = new Date(2026, 10, 1).getTime(); // Nov 1 2026
 const ACTIVE_ROSTER_FROM_AUG_2026 = new Set([
   "Akssheda","Ishita","Janhavi","Pooja","Devansh","Nikhil","Akhil","Aditi", // Interns
   "Abhishek","Ishika","Shravasti","Shivansh","Royce","Palash", // FTEs (+ Assoc. Manager, Manager)
@@ -736,10 +738,14 @@ const ACTIVE_ROSTER_FROM_OCT_2026 = new Set([
   "Janhavi","Nikhil","Akhil","Ankita","Riddhika","Shravani.H","Akssheda", // Interns
   "Aditi","Swarnim","Anushka", // Interns
 ]);
+const ACTIVE_ROSTER_FROM_NOV_2026 = new Set(
+  [...ACTIVE_ROSTER_FROM_OCT_2026].filter(p => p !== "Akhil" && p !== "Shravani.H")
+);
 // The roster in force for a given month (monthSort timestamp), or null = everyone.
 function rosterForMonthSort(monthSort){
   if (monthSort < ROSTER_CUTOFF) return null;
-  return monthSort < ROSTER_CUTOFF_OCT ? ACTIVE_ROSTER_FROM_AUG_2026 : ACTIVE_ROSTER_FROM_OCT_2026;
+  if (monthSort < ROSTER_CUTOFF_OCT) return ACTIVE_ROSTER_FROM_AUG_2026;
+  return monthSort < ROSTER_CUTOFF_NOV ? ACTIVE_ROSTER_FROM_OCT_2026 : ACTIVE_ROSTER_FROM_NOV_2026;
 }
 // True if this row's POC should be shown, given the row's own month.
 // Rows before August 2026 always show (nobody is retroactively hidden);
@@ -830,8 +836,8 @@ const VIEWS_SPEND_FOCUS_COUNTRIES = new Set([
 // source country. India is common to every POC and always listed last.
 const POC_COUNTRY_ASSIGNMENTS = {
   "Aditi":     ["UK - Dom","Bangladesh","Indonesia","Pakistan","India"],
-  "Akhil":     ["Malaysia","Indonesia","Nepal","Nigeria","India"],
   "Ankita":    ["Nigeria","UK - Dom","Taiwan","Vietnam","India"],
+  "Anushka":   ["Vietnam","Bangladesh","India"],
   "Ishika":    ["Japan","US - Dom","South Korea","Vietnam","India"],
   "Ishita":    ["Malaysia","Nigeria","South Korea","Nepal","India"],
   "Janhavi":   ["Indonesia","Nigeria","Thailand","UK - Dom","India"],
@@ -995,7 +1001,12 @@ function normalizeProspect(r){
   const platform = mapVal(getCell(r,"Platform"), PLATFORM_MAP, "");
   const dest = mapVal(getCell(r,"Destination"), DEST_MAP, "");
   const reachDate = parseDate(getCell(r,"Reachout date  (for new onboards )","Reachout date","Reach out date"));
-  const month = deriveMonth(getCell(r,"Month"), reachDate);
+  // The month a prospect belongs to comes from its reach-out DATE. The "Month" column is only
+  // a fallback for rows that have no usable date (it can be pre-filled or stale).
+  const labelMonth = deriveMonth(getCell(r,"Month"), reachDate);
+  const month = (reachDate && monthLabelFromDate(reachDate)) || labelMonth;
+  // Placeholder rows (no partner and no date) are not prospects, even if a month label is pre-filled.
+  if (!reachDate && !partner) return null;
   const mSort = monthSortKey(month);
   const subRaw = norm(getCell(r,"Subscriber","Subscribers","Subs/Followers"));
   let subscribers = 0;
