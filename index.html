@@ -238,6 +238,7 @@
     </section>
 
     <section id="kpi-row-videos" class="grid grid-cols-2 md:grid-cols-5 gap-3"></section>
+    <p id="kpi-traffic-note" class="text-[11px] text-zinc-400 -mt-3"></p>
 
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
@@ -1042,6 +1043,19 @@ function normalizeProspect(r){
   };
 }
 
+// Traffic columns are matched loosely ("Traffic (core)", "Core Traffic", "traffic - core" ...) and
+// the headers actually used are remembered so the Growth Tracker can show what it read.
+const TRAFFIC_HDR = { core:null, sch:null, legacy:null, all:new Set() };
+function findTrafficHeader(r, kind){
+  for (const k of Object.keys(r)){
+    const s = k.toLowerCase().replace(/[^a-z]/g,"");
+    if (s.includes("traffic")) TRAFFIC_HDR.all.add(k.trim());
+    if (kind==="core"   && s.includes("traffic") && s.includes("core") && !s.includes("scholar")) return k;
+    if (kind==="sch"    && s.includes("traffic") && s.includes("scholar")) return k;
+    if (kind==="legacy" && (s==="traffic" || s==="traffictotal" || s==="totaltraffic")) return k;
+  }
+  return null;
+}
 function normalizeVideo(r){
   const poc = norm(getCell(r,"POC name","PoC","POC","Poc","poc"));
   if (!poc) return null;
@@ -1068,9 +1082,13 @@ function normalizeVideo(r){
   const CT_CANONICAL = { "amber fest":"Amber Fest","amberfest":"Amber Fest","amber  fest":"Amber Fest","study abroad":"Study Abroad","scholarship":"Scholarship","room tour":"Room Tour","visa":"Visa","jobs":"Jobs","gap":"GAP" };
   const contentType = CT_CANONICAL[ctKey] || rawCT;
   const actRaw = norm(getCell(r,"Activity"));
-  const tCore = num(getCell(r,"Traffic (core)","Traffic core"));
-  const tSch  = num(getCell(r,"Traffic (scholarship)","Traffic scholarship"));
-  const tLegacy = num(getCell(r,"Traffic","Traffic (total)","Total traffic"));
+  const hCore = findTrafficHeader(r,"core"), hSch = findTrafficHeader(r,"sch"), hLeg = findTrafficHeader(r,"legacy");
+  if (hCore) TRAFFIC_HDR.core = hCore.trim();
+  if (hSch)  TRAFFIC_HDR.sch  = hSch.trim();
+  if (hLeg)  TRAFFIC_HDR.legacy = hLeg.trim();
+  const tCore = hCore ? num(r[hCore]) : 0;
+  const tSch  = hSch  ? num(r[hSch])  : 0;
+  const tLegacy = hLeg ? num(r[hLeg]) : 0;
   return {
     poc: canonPoc(poc),
     date, month, monthSort: monthSortKey(month),
@@ -3095,6 +3113,13 @@ function renderVideoKPIs(rows){
     { label:"Bookforms", value: fmtNum(bookforms), sub:`CPBF ${fmtINR(cpbf)}` },
     { label:"Bookings", value: fmtNum(bookings), sub:`CPB ${fmtINR(cpb)} · ` + (bookforms? ((bookings/bookforms)*100).toFixed(1)+"% of bookforms" : ""), color:"text-indigo-600" },
   ];
+  const note = document.getElementById("kpi-traffic-note");
+  if (note){
+    const T = TRAFFIC_HDR;
+    note.textContent = (T.core || T.sch)
+      ? `Traffic read from: ${T.core ? '"'+T.core+'" (core)' : "no core column"} · ${T.sch ? '"'+T.sch+'" (scholarship)' : "no scholarship column"} · build 12-Nov-2026`
+      : `⚠ No "Traffic (core)" / "Traffic (scholarship)" column found. Headers containing "traffic": ${T.all.size ? [...T.all].map(h=>'"'+h+'"').join(", ") : "none"} · build 12-Nov-2026`;
+  }
   document.getElementById("kpi-row-videos").innerHTML = k.map(x => `
     <div class="bg-white rounded-xl border border-zinc-200 p-4">
       <div class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">${x.label}</div>
