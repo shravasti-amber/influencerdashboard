@@ -254,6 +254,19 @@
 
 
 
+      <!-- Destination country: activity comparison (MoM / YoY / YTD, paid vs affiliate) -->
+      <div id="dest-cmp-card" class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
+        <div class="flex items-start justify-between gap-3 flex-wrap mb-3">
+          <div>
+            <h3 class="font-semibold text-sm">Destination country — activity comparison</h3>
+            <p class="text-xs text-zinc-500 mt-0.5" id="dest-cmp-sub"></p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap" id="dest-cmp-controls"></div>
+        </div>
+        <div class="overflow-x-auto"><table class="w-full text-xs" id="dest-cmp-table"></table></div>
+        <p class="text-[11px] text-zinc-400 mt-2" id="dest-cmp-note"></p>
+      </div>
+
       <div class="bg-white rounded-xl border border-zinc-200 p-4 lg:col-span-12">
         <div class="flex items-center justify-between mb-2"><h3 class="font-semibold text-sm">Cost efficiency by platform</h3><span class="text-xs text-zinc-500">CPV · CPL · efficiency</span></div>
         <div class="overflow-x-auto"><table class="w-full text-xs" id="tbl-channel-eff"></table></div>
@@ -2941,6 +2954,7 @@ function applyVideoFilters(){
   renderVideoCharts(rows);
   renderVideoProgress(rows);
   renderSourceCountryViewsSpend(rows);
+  renderDestComparison();
   renderTopVideos(rows);
   state.page.videos = 0;
   renderVideoTable(rows);
@@ -3082,6 +3096,96 @@ function renderSourceCountryViewsSpend(rows){
 }
 
 function sumField(rows, field){ return rows.reduce((s,r)=>s+(r[field]||0), 0); }
+
+
+// ── Destination country: activity comparison (replicates the "Destination country YOY - Paid" table) ──
+const DEST_CMP_ROWS = ["Australia","Ireland","UK","USA","Germany","Canada","New Zealand","France","Singapore","Other"];
+const destCmp = { mode:"yoy", monthSort:null };
+function destShortMonth(ms){ return new Date(ms).toLocaleString("en-US",{month:"short",year:"numeric"}); }
+function renderDestComparison(){
+  const table = document.getElementById("dest-cmp-table"); if (!table) return;
+  const f = state.filters.videos;
+  // Follows every Growth Tracker filter except Month (this card has its own period) and Paid/Affiliate (it splits by it).
+  const base = state.datasets.videos.filter(r =>
+    r.monthSort &&
+    (!f.poc.size || f.poc.has(r.poc)) &&
+    (!f.channel.size || f.channel.has(r.channel)) &&
+    (!f.source.size || f.source.has(r.source)) &&
+    (!f.destination.size || f.destination.has(r.destination)));
+  const months = [...new Set(base.map(r=>r.monthSort))].sort((a,b)=>b-a);
+  const ctrl = document.getElementById("dest-cmp-controls");
+  const sub = document.getElementById("dest-cmp-sub");
+  const note = document.getElementById("dest-cmp-note");
+  if (!months.length){
+    if (ctrl) ctrl.innerHTML = "";
+    if (sub) sub.textContent = "Upload the video live data to see this comparison.";
+    table.innerHTML = ""; if (note) note.textContent = ""; return;
+  }
+  if (!months.includes(destCmp.monthSort)) destCmp.monthSort = months[0];
+  const sel = new Date(destCmp.monthSort), y = sel.getFullYear(), m = sel.getMonth();
+  const mk = (yy,mm) => new Date(yy,mm,1).getTime();
+  let C, P, cLabel, pLabel;
+  if (destCmp.mode === "mom"){
+    C = [mk(y,m), mk(y,m)]; P = [mk(y,m-1), mk(y,m-1)];
+    cLabel = destShortMonth(C[0]); pLabel = destShortMonth(P[0]);
+  } else if (destCmp.mode === "ytd"){
+    C = [mk(y,0), mk(y,m)]; P = [mk(y-1,0), mk(y-1,m)];
+    const mn = sel.toLocaleString("en-US",{month:"short"});
+    cLabel = `YTD ${y} (Jan–${mn})`; pLabel = `YTD ${y-1} (Jan–${mn})`;
+  } else {
+    C = [mk(y,m), mk(y,m)]; P = [mk(y-1,m), mk(y-1,m)];
+    cLabel = destShortMonth(C[0]); pLabel = destShortMonth(P[0]);
+  }
+  const inP = (r,per) => r.monthSort >= per[0] && r.monthSort <= per[1];
+  const blank = () => ({ p:{paid:0,aff:0,tot:0}, c:{paid:0,aff:0,tot:0} });
+  const agg = {}; DEST_CMP_ROWS.forEach(d => agg[d] = blank());
+  let untagged = 0;
+  for (const r of base){
+    const isC = inP(r,C), isP = inP(r,P);
+    if (!isC && !isP) continue;
+    const d = DEST_CMP_ROWS.includes(r.destination) ? r.destination : "Other";
+    const bucket = isC ? agg[d].c : agg[d].p;
+    bucket.tot++;
+    if (r.paidAff === "Paid") bucket.paid++;
+    else if (r.paidAff === "Affiliate") bucket.aff++;
+    else if (isC) untagged++;
+  }
+  const tot = blank();
+  DEST_CMP_ROWS.forEach(d => { for (const w of ["p","c"]) for (const k of ["paid","aff","tot"]) tot[w][k] += agg[d][w][k]; });
+
+  if (sub) sub.textContent = `Videos live by destination country · ${cLabel} vs ${pLabel} · follows the filters above except Month and Paid/Affiliate`;
+  if (ctrl){
+    const btn = (id,label) => `<button type="button" data-dest-mode="${id}" class="px-2.5 py-1 ${destCmp.mode===id ? "bg-indigo-600 text-white font-medium" : "bg-white text-zinc-600 hover:bg-zinc-50"}">${label}</button>`;
+    ctrl.innerHTML = `
+      <div class="inline-flex rounded-lg border border-zinc-300 overflow-hidden text-xs divide-x divide-zinc-300">${btn("mom","MoM")}${btn("yoy","YoY")}${btn("ytd","YTD")}</div>
+      <select id="dest-cmp-month" class="text-xs border border-zinc-300 rounded-lg px-2 py-1.5 bg-white">
+        ${months.map(ms => `<option value="${ms}" ${ms===destCmp.monthSort?"selected":""}>${escapeHtml(new Date(ms).toLocaleString("en-US",{month:"long",year:"numeric"}))}</option>`).join("")}
+      </select>`;
+    ctrl.querySelectorAll("[data-dest-mode]").forEach(b => b.addEventListener("click", () => { destCmp.mode = b.dataset.destMode; renderDestComparison(); }));
+    const ms = ctrl.querySelector("#dest-cmp-month");
+    if (ms) ms.addEventListener("change", () => { destCmp.monthSort = +ms.value; renderDestComparison(); });
+  }
+
+  const growth = (c,p) => {
+    if (p > 0){ const g = ((c-p)/p)*100; return `<span class="${g>0?"text-emerald-600":g<0?"text-rose-600":"text-zinc-400"} font-medium">${g>0?"+":""}${g.toFixed(1)}%</span>`; }
+    return c > 0 ? `<span class="text-indigo-600 font-medium">new</span>` : `<span class="text-zinc-300">—</span>`;
+  };
+  const n = v => v === 0 ? `<span class="text-zinc-300">0</span>` : fmtNum(v);
+  const group = (label, cls) => `<th colspan="3" class="px-3 py-2 text-center ${cls} border-l border-white">${label}</th>`;
+  const sub3 = cls => `<th class="px-3 py-1.5 text-right ${cls} border-l border-white text-[10px]">${escapeHtml(pLabel)}</th><th class="px-3 py-1.5 text-right ${cls} text-[10px]">${escapeHtml(cLabel)}</th><th class="px-3 py-1.5 text-right ${cls} text-[10px]">Growth %</th>`;
+  const cells = (o,k) => `<td class="px-3 py-2 text-right tabular-nums border-l border-zinc-100">${n(o.p[k])}</td><td class="px-3 py-2 text-right tabular-nums">${n(o.c[k])}</td><td class="px-3 py-2 text-right tabular-nums">${growth(o.c[k],o.p[k])}</td>`;
+  const body = DEST_CMP_ROWS.map((d,i) => `<tr class="${i%2?"bg-zinc-50/60":""} hover:bg-indigo-50"><td class="px-3 py-2 font-medium">${escapeHtml(d)}</td>${cells(agg[d],"paid")}${cells(agg[d],"aff")}${cells(agg[d],"tot")}</tr>`).join("");
+  const foot = `<tr class="border-t-2 border-zinc-300 bg-zinc-50 font-bold"><td class="px-3 py-2">Total</td>${cells(tot,"paid")}${cells(tot,"aff")}${cells(tot,"tot")}</tr>`;
+  table.innerHTML = `
+    <thead class="text-zinc-500 uppercase tracking-wide text-[11px]">
+      <tr class="bg-zinc-50"><th rowspan="2" class="px-3 py-2 text-left bg-zinc-50 align-bottom">Destination country</th>
+        ${group("Paid activities","bg-indigo-50 text-indigo-700")}${group("Affiliate activities","bg-emerald-50 text-emerald-700")}${group("Total (paid + affiliate)","bg-violet-50 text-violet-700")}</tr>
+      <tr class="bg-zinc-50">${sub3("bg-indigo-50/50 text-indigo-700")}${sub3("bg-emerald-50/50 text-emerald-700")}${sub3("bg-violet-50/50 text-violet-700")}</tr>
+    </thead>
+    <tbody class="divide-y divide-zinc-100">${body}</tbody>
+    <tfoot>${foot}</tfoot>`;
+  if (note) note.textContent = untagged ? `${untagged} activit${untagged===1?"y":"ies"} in ${cLabel} have no Paid/Affiliate tag; they are counted in Total only.` : "";
+}
 
 function renderVideoKPIs(rows){
   const paidRows = rows.filter(r => r.paidAff === "Paid");
