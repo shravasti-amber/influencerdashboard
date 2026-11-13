@@ -228,7 +228,7 @@
   <div data-tab-content="videos" class="hidden space-y-6">
 
     <section class="bg-white rounded-xl border border-zinc-200 p-4">
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" id="filters-videos"></div>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3" id="filters-videos"></div>
       <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
         <div id="active-chips-videos" class="flex flex-wrap gap-1.5"></div>
         <div class="flex items-center gap-2">
@@ -984,7 +984,7 @@ const state = {
   vpT2Sort: "alpha", // "alpha", "onb", "resp"
   filters: {
     prospects: { poc:new Set(), month:new Set(), platform:new Set(), destination:new Set(), source:new Set(), region:new Set(), status:new Set(), foundVia:new Set(), search:"" },
-    videos:    { poc:new Set(), month:new Set(), channel:new Set(), destination:new Set(), source:new Set(), paidAff:new Set(), quality:new Set(), search:"" },
+    videos:    { poc:new Set(), year:new Set(), month:new Set(), channel:new Set(), destination:new Set(), source:new Set(), paidAff:new Set(), quality:new Set(), search:"" },
     vp:        { month:new Set(), destination:new Set(), source:new Set(), region:new Set() },
   },
 };
@@ -1106,6 +1106,7 @@ function normalizeVideo(r){
   return {
     poc: canonPoc(poc),
     date, month, monthSort: monthSortKey(month),
+    year: monthSortKey(month) > 0 ? String(new Date(monthSortKey(month)).getFullYear()) : "",
     activity: actRaw || "—",
     isCrossPosted: !actRaw, // true when Activity column is blank
     partner: norm(getCell(r,"Partner name")),
@@ -1143,17 +1144,23 @@ function sheetType(headers){
 
 // The Growth Tracker reads ONLY these two tabs (matched by name, ignoring case and extra spaces).
 const GROWTH_TABS = ["growth tracker","2025 tracker data"];
+const GROWTH_YEARS = ["2025","2026"];
+// Rows whose year is known but outside 2025-2026 (e.g. stray 2024 entries) are discounted.
+const videoYearOk = r => !r.year || GROWTH_YEARS.includes(r.year);
 function videosFromWorkbook(wb){
   const videos = [], found = [];
+  let excluded = 0;
   for (const sheetName of wb.SheetNames){
     const key = sheetName.trim().toLowerCase().replace(/\s+/g," ");
     if (!GROWTH_TABS.includes(key)) continue;
     const data = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval:"", raw:true });
-    const rows = data.map(normalizeVideo).filter(Boolean);
+    const all = data.map(normalizeVideo).filter(Boolean);
+    const rows = all.filter(videoYearOk);
+    excluded += all.length - rows.length;
     videos.push(...rows);
     found.push({ name: sheetName.trim(), rows: rows.length });
   }
-  return { videos, found };
+  return { videos, found, excluded };
 }
 
 async function ingestFile(file){
@@ -1183,7 +1190,7 @@ function ingestCsv(text){
   state.datasets.prospects = [];
   state.datasets.videos = [];
   if (t === "videos") {
-    state.datasets.videos = parsed.data.map(normalizeVideo).filter(Boolean);
+    state.datasets.videos = parsed.data.map(normalizeVideo).filter(Boolean).filter(videoYearOk);
   } else {
     state.datasets.prospects = parsed.data.map(normalizeProspect).filter(Boolean);
   }
@@ -1347,23 +1354,28 @@ function buildFilters(hostId, dataset, filterMap, onChange, rowKeys){
 }
 // Re-render the Source Country checkbox list inside `hostId` so it only offers `countries`.
 // Any selected country that is no longer offered is dropped from the filter set.
-function setSourceOptions(hostId, filterMap, countries, onChange){
+function setFilterOptions(hostId, filterMap, key, values, onChange){
   const host = document.getElementById(hostId); if (!host) return;
-  const list = host.querySelector('[data-list="source"]'); if (!list) return;
-  const set = filterMap.source.set;
-  for (const v of [...set]) if (!countries.includes(v)) set.delete(v);
+  const list = host.querySelector(`[data-list="${key}"]`); if (!list) return;
+  const set = filterMap[key].set;
+  for (const v of [...set]) if (!values.includes(v)) set.delete(v);
   list.querySelectorAll("label").forEach(l => l.remove());
-  countries.forEach(v => {
+  values.forEach(v => {
     const lab = document.createElement("label");
-    lab.innerHTML = `<input type="checkbox" value="${escapeAttr(v)}" data-filter="source" ${set.has(v) ? "checked" : ""} /> <span>${escapeHtml(v)}</span>`;
+    lab.innerHTML = `<input type="checkbox" value="${escapeAttr(v)}" data-filter="${key}" ${set.has(v) ? "checked" : ""} /> <span>${escapeHtml(v)}</span>`;
     lab.querySelector("input").addEventListener("change", ev => {
       if (ev.target.checked) set.add(v); else set.delete(v);
-      updateBtnLabel(host, "source", set);
+      updateBtnLabel(host, key, set);
+      if (filterMap[key].afterChange) filterMap[key].afterChange();
       onChange();
     });
     list.appendChild(lab);
   });
-  updateBtnLabel(host, "source", set);
+  updateBtnLabel(host, key, set);
+}
+// Re-render the Source Country checkbox list so it only offers `countries`.
+function setSourceOptions(hostId, filterMap, countries, onChange){
+  setFilterOptions(hostId, filterMap, "source", countries, onChange);
 }
 document.addEventListener("click", e => {
   if (!e.target.closest(".multiselect")){
@@ -1409,6 +1421,7 @@ function renderActiveChips(tab, hostId, totalRows){
       if (cb) cb.checked = false;
       updateBtnLabel(filterHost, el.dataset.rmK, state.filters[el.dataset.rmTab][el.dataset.rmK]);
       if (tab === "prospects" && el.dataset.rmK === "region") syncProspectSourceOptions();
+      if (tab === "videos" && el.dataset.rmK === "year") syncVideoMonthOptions();
       if (tab === "prospects") applyProspectFilters(); else applyVideoFilters();
     });
   });
@@ -2942,6 +2955,7 @@ function renderProspectTable(rows){
 // ============================================================
 const VIDEO_FILTERS = {
   poc:        { label:"POC", field:"poc", set:null },
+  year:       { label:"Year", field:"year", set:null, options: GROWTH_YEARS },
   month:      { label:"Month", field:"month", set:null, sort:(a,b)=>monthSortKey(a)-monthSortKey(b) },
   channel:    { label:"Channel", field:"channel", set:null },
   source:     { label:"Source Country", field:"source", set:null, options: SOURCE_DROPDOWN_COUNTRIES },
@@ -2949,8 +2963,19 @@ const VIDEO_FILTERS = {
   paidAff:    { label:"Paid / Affiliate", field:"paidAff", set:null },
 };
 
+// Month options follow the selected Year(s); with no year selected, every month in the data.
+function videoMonthOptions(){
+  const ys = state.filters.videos.year;
+  return [...new Set(state.datasets.videos.filter(r => r.month && videoYearOk(r) && (!ys.size || ys.has(r.year))).map(r => r.month))]
+    .sort((a,b) => monthSortKey(a) - monthSortKey(b));
+}
+function syncVideoMonthOptions(){
+  setFilterOptions("filters-videos", VIDEO_FILTERS, "month", videoMonthOptions(), applyVideoFilters);
+}
 function buildVideoFilters(){
   for (const k of Object.keys(VIDEO_FILTERS)) VIDEO_FILTERS[k].set = state.filters.videos[k];
+  VIDEO_FILTERS.month.options = videoMonthOptions();
+  VIDEO_FILTERS.year.afterChange = syncVideoMonthOptions;
   buildFilters("filters-videos", state.datasets.videos, VIDEO_FILTERS, applyVideoFilters);
 }
 
@@ -2958,6 +2983,8 @@ function applyVideoFilters(){
   const f = state.filters.videos;
   const rows = state.datasets.videos.filter(r => {
     if (f.poc.size && !f.poc.has(r.poc)) return false;
+    if (!videoYearOk(r)) return false;
+    if (f.year.size && !f.year.has(r.year)) return false;
     if (f.month.size && !f.month.has(r.month)) return false;
     if (f.channel.size && !f.channel.has(r.channel)) return false;
     if (f.destination.size && !f.destination.has(r.destination)) return false;
@@ -3178,7 +3205,7 @@ function renderDestComparison(){
   const tot = blank();
   DEST_CMP_ROWS.forEach(d => { for (const w of ["p","c"]) for (const k of ["paid","aff","tot"]) tot[w][k] += agg[d][w][k]; });
 
-  if (sub) sub.textContent = `Videos live by destination country · ${single ? cLabel : cLabel + " vs " + pLabel} · follows the filters above except Month and Paid/Affiliate`;
+  if (sub) sub.textContent = `Videos live by destination country · ${single ? cLabel : cLabel + " vs " + pLabel} · follows the filters above except Year, Month and Paid/Affiliate`;
   if (ctrl){
     const btn = (id,label) => `<button type="button" data-dest-mode="${id}" class="px-2.5 py-1 ${destCmp.mode===id ? "bg-indigo-600 text-white font-medium" : "bg-white text-zinc-600 hover:bg-zinc-50"}">${label}</button>`;
     ctrl.innerHTML = `
@@ -3978,6 +4005,7 @@ document.querySelectorAll("[data-reset]").forEach(btn => {
     host.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
     host.querySelectorAll("[data-toggle]").forEach(b => b.textContent = "All");
     if (tab === "prospects") syncProspectSourceOptions();
+    if (tab === "videos") syncVideoMonthOptions();
     if (tab === "prospects") applyProspectFilters(); else applyVideoFilters();
   });
 });
@@ -4023,10 +4051,11 @@ document.getElementById("file-input-videos").addEventListener("change", e => {
       e.target.value = ""; return;
     }
     state.datasets.videos = res.videos;
+    state._videosExcluded = res.excluded;
     const empties = res.found.filter(t => !t.rows);
     if (empties.length) alert(`Found the tab(s) ${empties.map(t=>'"'+t.name+'"').join(", ")} but couldn't read any rows from them. Each row needs a POC name, and the tab needs headers like "POC name" and "Total views".`);
     document.querySelector('[data-count="videos"]').textContent = state.datasets.videos.length;
-    document.getElementById("load-status").textContent = `${state.datasets.prospects.length.toLocaleString()} prospects · ${state.datasets.videos.length.toLocaleString()} videos (${res.found.map(t=>t.name+": "+t.rows.toLocaleString()).join(" · ")})`;
+    document.getElementById("load-status").textContent = `${state.datasets.prospects.length.toLocaleString()} prospects · ${state.datasets.videos.length.toLocaleString()} videos (${res.found.map(t=>t.name+": "+t.rows.toLocaleString()).join(" · ")})${res.excluded ? ` · ${res.excluded} outside 2025–2026 skipped` : ""}`;
     document.getElementById("tab-bar").classList.remove("hidden");
     document.getElementById("empty-state").classList.add("hidden");
     if (state.tab === "videos") { buildVideoFilters(); applyVideoFilters(); }
