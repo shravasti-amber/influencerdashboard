@@ -1099,7 +1099,8 @@ function normalizeVideo(r){
   if (hCore) TRAFFIC_HDR.core = hCore.trim();
   if (hSch)  TRAFFIC_HDR.sch  = hSch.trim();
   if (hLeg)  TRAFFIC_HDR.legacy = hLeg.trim();
-  const tCore = hCore ? num(r[hCore]) : 0;
+  // 2025 had no scholarship campaign: a sheet with only a plain "Traffic" column is all core traffic.
+  const tCore = hCore ? num(r[hCore]) : (hLeg && !hSch ? num(r[hLeg]) : 0);
   const tSch  = hSch  ? num(r[hSch])  : 0;
   const tLegacy = hLeg ? num(r[hLeg]) : 0;
   return {
@@ -1115,7 +1116,7 @@ function normalizeVideo(r){
     source: normalizeSourceCountry(getCell(r,"Source Country")) || "—",
     destination: dest || "—",
     region: norm(getCell(r,"Broader region by Source Country")) || "",
-    views: num(getCell(r,"Total views")),
+    views: num(getCell(r,"Total views","Views")),
     trafficCore: tCore,
     trafficSch: tSch,
     // Total traffic = core + scholarship. Falls back to a single legacy "Traffic" column
