@@ -83,8 +83,8 @@
       </label>
       <label class="cursor-pointer inline-flex items-center gap-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white text-sm font-medium px-3 py-2 rounded-lg">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        Upload Growth Tracker
-        <input id="file-input-videos" type="file" accept=".csv,.xlsx,.xls" class="hidden" />
+        Upload Growth Tracker (.xlsx)
+        <input id="file-input-videos" type="file" accept=".xlsx,.xls" class="hidden" />
       </label>
       <button id="load-sample" class="text-sm px-3 py-2 rounded-lg border border-zinc-300 hover:bg-zinc-100">Load current workbook</button>
     </div>
@@ -98,7 +98,7 @@
     <h2 class="text-xl font-semibold mb-1">Drop the workbook here</h2>
     <p class="text-zinc-500 text-sm mb-4">Or click <b>Upload</b> in the top right. Accepts .xlsx (multi-sheet) and .csv.</p>
     <button id="load-sample-2" class="text-sm px-4 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">Load current Master workbook</button>
-    <p class="text-xs text-zinc-400 mt-4">We auto-detect the <b>Master prospect</b>, <b>video live data</b>, and <b>Target Sheet</b> tabs.</p>
+    <p class="text-xs text-zinc-400 mt-4">We auto-detect the <b>Master prospect</b>, <b>Target Sheet</b> tabs. The Growth Tracker reads only the <b>Growth Tracker</b> and <b>2025 tracker data</b> tabs (upload as .xlsx).</p>
   </div>
 
   <!-- TABS -->
@@ -1140,6 +1140,21 @@ function sheetType(headers){
   return null;
 }
 
+// The Growth Tracker reads ONLY these two tabs (matched by name, ignoring case and extra spaces).
+const GROWTH_TABS = ["growth tracker","2025 tracker data"];
+function videosFromWorkbook(wb){
+  const videos = [], found = [];
+  for (const sheetName of wb.SheetNames){
+    const key = sheetName.trim().toLowerCase().replace(/\s+/g," ");
+    if (!GROWTH_TABS.includes(key)) continue;
+    const data = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval:"", raw:true });
+    const rows = data.map(normalizeVideo).filter(Boolean);
+    videos.push(...rows);
+    found.push({ name: sheetName.trim(), rows: rows.length });
+  }
+  return { videos, found };
+}
+
 async function ingestFile(file){
   const name = file.name.toLowerCase();
   document.getElementById("load-status").textContent = "Parsing…";
@@ -1203,6 +1218,8 @@ function ingestXlsx(buf){
     if (best) prospects.push(...best.map(normalizeProspect).filter(Boolean));
   }
   state.datasets.prospects = prospects;
+  const gt = videosFromWorkbook(wb);
+  if (gt.found.length) state.datasets.videos = gt.videos;
   state.datasets.targets = parseTargets(targetsSheet);
   state.datasets.snehal  = snehalSheet;
   onLoad();
@@ -3128,6 +3145,10 @@ function renderDestComparison(){
   if (destCmp.mode === "mom"){
     C = [mk(y,m), mk(y,m)]; P = [mk(y,m-1), mk(y,m-1)];
     cLabel = destShortMonth(C[0]); pLabel = destShortMonth(P[0]);
+  } else if (destCmp.mode === "yoy"){
+    // Same month, previous year.
+    C = [mk(y,m), mk(y,m)]; P = [mk(y-1,m), mk(y-1,m)];
+    cLabel = destShortMonth(C[0]); pLabel = destShortMonth(P[0]);
   } else if (destCmp.mode === "ytd"){
     // Year to date: Jan of the selected year through the selected month. No comparison.
     C = [mk(y,0), mk(y,m)]; P = null;
@@ -3160,7 +3181,7 @@ function renderDestComparison(){
   if (ctrl){
     const btn = (id,label) => `<button type="button" data-dest-mode="${id}" class="px-2.5 py-1 ${destCmp.mode===id ? "bg-indigo-600 text-white font-medium" : "bg-white text-zinc-600 hover:bg-zinc-50"}">${label}</button>`;
     ctrl.innerHTML = `
-      <div class="inline-flex rounded-lg border border-zinc-300 overflow-hidden text-xs divide-x divide-zinc-300">${btn("month","Month")}${btn("mom","MoM")}${btn("ytd","YTD")}</div>
+      <div class="inline-flex rounded-lg border border-zinc-300 overflow-hidden text-xs divide-x divide-zinc-300">${btn("month","Month")}${btn("mom","MoM")}${btn("yoy","YoY")}${btn("ytd","YTD")}</div>
       <select id="dest-cmp-month" class="text-xs border border-zinc-300 rounded-lg px-2 py-1.5 bg-white">
         ${months.map(ms => `<option value="${ms}" ${ms===destCmp.monthSort?"selected":""}>${escapeHtml(new Date(ms).toLocaleString("en-US",{month:"long",year:"numeric"}))}</option>`).join("")}
       </select>`;
@@ -3987,36 +4008,29 @@ document.getElementById("file-input").addEventListener("change", e => { const f 
 document.getElementById("file-input-videos").addEventListener("change", e => {
   const f = e.target.files[0]; if (!f) return;
   const name = f.name.toLowerCase();
-  document.getElementById("load-status").textContent = "Parsing Videos…";
-  if (name.endsWith(".csv")) {
-    f.text().then(text => {
-      const parsed = Papa.parse(text, { header:true, skipEmptyLines:true });
-      state.datasets.videos = parsed.data.map(normalizeVideo).filter(Boolean);
-      document.querySelector('[data-count="videos"]').textContent = state.datasets.videos.length;
-      document.getElementById("load-status").textContent = `${state.datasets.prospects.length.toLocaleString()} prospects · ${state.datasets.videos.length.toLocaleString()} videos`;
-      document.getElementById("tab-bar").classList.remove("hidden");
-      document.getElementById("empty-state").classList.add("hidden");
-      if (state.tab === "videos") { buildVideoFilters(); applyVideoFilters(); }
-    });
-  } else {
-    f.arrayBuffer().then(buf => {
-      const wb = XLSX.read(buf, { type:"array", cellDates:true });
-      const videos = [];
-      for (const name of wb.SheetNames) {
-        const ws = wb.Sheets[name];
-        const data = XLSX.utils.sheet_to_json(ws, { defval:"", raw:true });
-        if (!data.length) continue;
-        const t = sheetType(Object.keys(data[0]));
-        if (t === "videos") videos.push(...data.map(normalizeVideo).filter(Boolean));
-      }
-      state.datasets.videos = videos;
-      document.querySelector('[data-count="videos"]').textContent = state.datasets.videos.length;
-      document.getElementById("load-status").textContent = `${state.datasets.prospects.length.toLocaleString()} prospects · ${state.datasets.videos.length.toLocaleString()} videos`;
-      document.getElementById("tab-bar").classList.remove("hidden");
-      document.getElementById("empty-state").classList.add("hidden");
-      if (state.tab === "videos") { buildVideoFilters(); applyVideoFilters(); }
-    });
+  if (!(name.endsWith(".xlsx") || name.endsWith(".xls"))) {
+    alert("The Growth Tracker needs the .xlsx workbook (it reads the \"Growth Tracker\" and \"2025 tracker data\" tabs). CSV files can't carry both tabs.");
+    e.target.value = ""; return;
   }
+  document.getElementById("load-status").textContent = "Parsing Growth Tracker…";
+  f.arrayBuffer().then(buf => {
+    const wb = XLSX.read(buf, { type:"array", cellDates:true });
+    const res = videosFromWorkbook(wb);
+    if (!res.found.length) {
+      document.getElementById("load-status").textContent = "";
+      alert(`Couldn't find a "Growth Tracker" or "2025 tracker data" tab in this file.\n\nTabs in the file: ${wb.SheetNames.join(", ")}`);
+      e.target.value = ""; return;
+    }
+    state.datasets.videos = res.videos;
+    const empties = res.found.filter(t => !t.rows);
+    if (empties.length) alert(`Found the tab(s) ${empties.map(t=>'"'+t.name+'"').join(", ")} but couldn't read any rows from them. Each row needs a POC name, and the tab needs headers like "POC name" and "Total views".`);
+    document.querySelector('[data-count="videos"]').textContent = state.datasets.videos.length;
+    document.getElementById("load-status").textContent = `${state.datasets.prospects.length.toLocaleString()} prospects · ${state.datasets.videos.length.toLocaleString()} videos (${res.found.map(t=>t.name+": "+t.rows.toLocaleString()).join(" · ")})`;
+    document.getElementById("tab-bar").classList.remove("hidden");
+    document.getElementById("empty-state").classList.add("hidden");
+    if (state.tab === "videos") { buildVideoFilters(); applyVideoFilters(); }
+    e.target.value = "";
+  });
 });
 const empty = document.getElementById("empty-state");
 ["dragenter","dragover"].forEach(ev => empty.addEventListener(ev, e => { e.preventDefault(); empty.classList.add("drop-active"); }));
