@@ -201,7 +201,7 @@
         <div class="flex items-center justify-between mb-3">
           <div>
             <h3 class="font-semibold text-sm">POC Status Breakdown</h3>
-            <p class="text-xs text-zinc-500 mt-0.5">reach-out status by POC</p>
+            <p class="text-xs text-zinc-500 mt-0.5" id="poc-breakdown-subtitle">reach-out status by POC</p>
           </div>
           <div class="flex items-center gap-2 flex-wrap justify-end">
             <span id="poc-breakdown-warning" class="hidden text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-3 py-1.5">Select a single month for weekly view</span>
@@ -852,7 +852,7 @@ const VIEWS_SPEND_FOCUS_COUNTRIES = new Set([
 const POC_COUNTRY_ASSIGNMENTS = {
   "Aditi":     ["UK - Dom","Bangladesh","Indonesia","Pakistan","India"],
   "Ankita":    ["Nigeria","UK - Dom","Taiwan","Vietnam","India"],
-  "Anushka":   ["Vietnam","Bangladesh","India"],
+  "Anushka":   ["Vietnam","Bangladesh","Pakistan","India"],
   "Ishika":    ["Japan","US - Dom","South Korea","Vietnam","India"],
   "Ishita":    ["Malaysia","Nigeria","South Korea","Nepal","India"],
   "Janhavi":   ["Indonesia","Nigeria","Thailand","UK - Dom","India"],
@@ -2674,6 +2674,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const sel = document.getElementById("vp-lost-region");
   if (sel) sel.addEventListener("change", () => { if (state._vpLostRows) renderVpLostChart(state._vpLostRows); });
 });
+// POCs assigned to the Source Country / Source Region currently filtered on the Prospects tab, or null
+// when neither filter is set. Shravasti also covers every SEA-region country.
+function pocsAssignedToSourceFilter(){
+  const f = state.filters.prospects;
+  let countries = [...f.source], label = countries.join(", ");
+  let seaSelected = false;
+  if (countries.length){
+    seaSelected = countries.some(c => SOURCE_REGION_MAP[c.toLowerCase()] === "SEA");
+  } else if (f.region.size){
+    countries = Object.keys(COUNTRY_TO_POCS).filter(c => f.region.has(SOURCE_REGION_MAP[c.toLowerCase()]));
+    seaSelected = f.region.has("SEA");
+    label = [...f.region].join(", ") + " region";
+  } else return null;
+  const set = new Set();
+  countries.forEach(c => (COUNTRY_TO_POCS[c] || []).forEach(p => set.add(p)));
+  if (seaSelected) set.add("Shravasti");
+  return { set, label };
+}
+
 function renderPocBreakdownTable(rows){
   state._pocBreakdownRows = rows;
   const thead  = document.getElementById("poc-breakdown-thead");
@@ -2721,8 +2740,13 @@ function renderPocBreakdownTable(rows){
         ? [...new Set(rows.filter(r=>r.month===targetMonth).map(r=>r.poc))]
         : [...rosterForMonthSort(pocScopeMonthSort)])
     : [...new Set(rows.map(r=>r.poc))];
-  const pocNames = [...new Set(rosterPocNames)].filter(p=>p&&p!=="—"&&!EXCLUDED_MANAGER.has(p))
+  let pocNames = [...new Set(rosterPocNames)].filter(p=>p&&p!=="—"&&!EXCLUDED_MANAGER.has(p))
     .sort((a,b)=>a.localeCompare(b));
+  // When a Source Country (or Source Region) filter is on, only show the team members assigned to it.
+  const assigned = pocsAssignedToSourceFilter();
+  if (assigned) pocNames = pocNames.filter(p => assigned.set.has(p));
+  const pocSub = document.getElementById("poc-breakdown-subtitle");
+  if (pocSub) pocSub.textContent = assigned ? `reach-out status by POC · assigned to ${assigned.label}` : "reach-out status by POC";
 
   let weekBounds = [];
   if (targetMonth){
